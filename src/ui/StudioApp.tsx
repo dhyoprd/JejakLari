@@ -154,6 +154,7 @@ export function StudioApp() {
   const rivalRef = useRef<Activity | null>(null);
   const previewAudioContextRef = useRef<AudioContext | null>(null);
   const osmForceRef = useRef(false);
+  const composerRef = useRef<FrameComposer | null>(null);
 
   const audioTrack = useMemo<AudioTrackProvider>(() => {
     if (musicMode === 'none') return new SilentAudioTrack();
@@ -470,18 +471,40 @@ export function StudioApp() {
 
     next.canvas.className = 'stage-gl';
     next.hudCanvas.className = 'stage-hud';
+    // Render one complete frame before swapping DOM nodes. Disposing the old
+    // renderer first would blank its canvas and flash black during style/look
+    // changes; the old composer is disposed only after the new frame is live.
+    try {
+      next.draw(
+        frameStateAt(timeRef.current, duration, activity.totalDurationSec),
+        1 / 30,
+        playingRef.current,
+      );
+    } catch (renderError) {
+      next.dispose();
+      setError(`Gagal merender frame awal: ${errorMessage(renderError)}`);
+      return;
+    }
+    const previous = composerRef.current;
+    composerRef.current = next;
     stage.replaceChildren(next.canvas, next.hudCanvas);
+    previous?.dispose();
     setComposer(next);
     setStatus((current) =>
       current.startsWith('Menyiapkan') || current.startsWith('Memuat') ? 'Studio siap' : current,
     );
 
     return () => {
-      stage.replaceChildren();
-      next.dispose();
       setComposer((current) => (current === next ? null : current));
     };
   }, [activity, rival, diorama, map, primaryVisualKey, rivalVisualKey, sky, mapStyle]);
+
+  useEffect(() => {
+    return () => {
+      composerRef.current?.dispose();
+      composerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!composer) return;

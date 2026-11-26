@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,272.62 kB │ gzip: 334.57 kB
+dist/assets/index-*.js          1,272.85 kB │ gzip: 334.62 kB
 ✓ built in ~256 ms
 ```
 
@@ -93,6 +93,9 @@ With a 5 km GBK route and the default `maps.mail.ru` endpoint:
 - Invalid GPX: `Koordinat GPS valid di dalam file aktivitas kurang dari 2 titik.`
 - Paused preview: Follow → Front changed the center WebGL hash.
 - Frame PNG: 720×1280, HUD text and colored tiles present.
+- Composer swaps (look/style rebuilds) render the first frame before replacing the visible canvas
+  and dispose the old renderer afterwards. A 20 ms sampling loop across a jersey swatch rebuild
+  recorded 47 frames, 0 dark frames (minimum center sum 4,192).
 - Production server on port 5189: `dist/` served, `/api/strava/status` 200 JSON, client route
   returned `text/html`, no console errors.
 
