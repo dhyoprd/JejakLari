@@ -120,7 +120,7 @@ function marker(
   radius: number,
 ): THREE.Group {
   const group = new THREE.Group();
-  group.position.set(position.x, 1.12, position.z);
+  group.position.set(position.x, 1.22, position.z);
 
   const disc = new THREE.Mesh(
     new THREE.CircleGeometry(radius, 48),
@@ -130,6 +130,9 @@ function marker(
       opacity: 0.18,
       depthWrite: false,
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
     }),
   );
   disc.rotation.x = -Math.PI / 2;
@@ -142,6 +145,9 @@ function marker(
       transparent: true,
       opacity: 0.95,
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
     }),
   );
   ring.rotation.x = -Math.PI / 2;
@@ -191,11 +197,13 @@ export class StudioScene {
 
   constructor(options: SceneOptions) {
     this.options = options;
-    this.camera = new THREE.PerspectiveCamera(43, 9 / 16, 0.4, 40000);
+    this.camera = new THREE.PerspectiveCamera(43, 9 / 16, 1, 30000);
     const palette = SKY_PALETTES[options.sky];
 
     this.scene.background = new THREE.Color(palette.background);
     const maxSpan = Math.max(options.diorama.spanMetersX, options.diorama.spanMetersZ);
+    this.camera.far = Math.max(12000, Math.min(30000, maxSpan * 8));
+    this.camera.updateProjectionMatrix();
     this.scene.fog = new THREE.Fog(new THREE.Color(palette.fog), maxSpan * 1.1, maxSpan * 5.2);
 
     const hemisphere = new THREE.HemisphereLight(palette.ambient, palette.ground, palette.ambientIntensity);
@@ -209,7 +217,7 @@ export class StudioScene {
 
     this.mapTexture = new THREE.CanvasTexture(options.map.canvas);
     this.mapTexture.colorSpace = THREE.SRGBColorSpace;
-    this.mapTexture.anisotropy = 8;
+    this.mapTexture.anisotropy = 16;
     this.mapTexture.minFilter = THREE.LinearMipmapLinearFilter;
     this.mapTexture.magFilter = THREE.LinearFilter;
     this.mapTexture.generateMipmaps = true;
@@ -217,7 +225,12 @@ export class StudioScene {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(options.map.widthMeters, options.map.heightMeters),
-      new THREE.MeshBasicMaterial({ map: this.mapTexture }),
+      new THREE.MeshBasicMaterial({
+        map: this.mapTexture,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(options.map.centerX, 0, options.map.centerZ);
@@ -240,6 +253,9 @@ export class StudioScene {
         opacity: 0.32,
         side: THREE.DoubleSide,
         depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       }),
     );
     this.scene.add(dim);
@@ -251,7 +267,10 @@ export class StudioScene {
       new THREE.MeshBasicMaterial({
         color: '#2dd4bf',
         side: THREE.DoubleSide,
-        depthWrite: false,
+        depthWrite: true,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       }),
     );
     const glow = new THREE.Mesh(
@@ -263,6 +282,9 @@ export class StudioScene {
         side: THREE.DoubleSide,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       }),
     );
     this.scene.add(glow, progress);
@@ -284,6 +306,9 @@ export class StudioScene {
           opacity: 0.35,
           side: THREE.DoubleSide,
           depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2,
         }),
       ).rotateX(-Math.PI / 2),
     );
@@ -339,10 +364,13 @@ export class StudioScene {
           opacity: 0.55,
           side: THREE.DoubleSide,
           depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2,
         }),
       );
       tick.rotation.x = -Math.PI / 2;
-      tick.position.set(point.x, 1.06, point.z);
+      tick.position.set(point.x, 1.22, point.z);
       this.markerGroup.add(tick);
     }
   }
@@ -389,7 +417,7 @@ export class StudioScene {
     }
 
     this.updateRouteProgress(point.distanceKm / Math.max(0.1, activity.totalDistanceKm));
-    this.phase.position.set(transform.x, 1.19, transform.z);
+    this.phase.position.set(transform.x, 1.24, transform.z);
     this.runnerRing.rotation.z += frame.deltaSec * 0.8;
 
     this.cameraDirector.update(this.camera, frame.deltaSec, {

@@ -133,6 +133,9 @@ export function buildOsmBuildingsMesh(
     roughness: 0.84,
     metalness: 0.04,
     side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'osm-buildings';
