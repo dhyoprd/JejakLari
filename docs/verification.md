@@ -9,7 +9,7 @@ on `127.0.0.1`.
 ```text
 $ npx vitest run
 Test Files  5 passed (5)
-     Tests  27 passed (27)
+     Tests  30 passed (30)
 
 $ npx tsc --noEmit
 (no output, exit 0)
@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,274.11 kB │ gzip: 334.85 kB
+dist/assets/index-*.js          1,274.48 kB │ gzip: 334.93 kB
 ✓ built in ~256 ms
 ```
 
@@ -35,6 +35,8 @@ Coverage:
   queries surviving a caller abort, and post-abort dedupe while the shared query completes.
 - OSM merged building geometry: wall/roof triangles, height bounds, `DoubleSide`/vertex colors,
   degenerate input.
+- Tight camera presets: Front/Side/Chase keep a runner moving at 220 video m/s within 24 m of the
+  look target across 120 simulated frames; heading smoothing is separate from position tracking.
 
 ## End-to-end browser verification
 

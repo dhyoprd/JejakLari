@@ -265,7 +265,7 @@ VPN route, not a disabled client check.
 
 See `docs/verification.md` for commands and exact ffprobe output. Summary:
 
-- 27 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser (coalesced abort),
+- 30 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser (coalesced abort), tight-camera tracking,
   and merged building geometry.
 - MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s; buildings enabled.
 - WebM fallback probed as VP9 + Opus at 720×1280.

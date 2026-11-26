@@ -20,7 +20,7 @@ only when you click an activity, and tokens stay in server memory.
 | Real map backdrop: Esri satellite, OSM streets, CyclOSM topo, CARTO dark | Working, with offline canvas fallback |
 | 3D diorama: map texture, route ribbon, progress glow, km markers, start/finish beacons | Working |
 | Procedural chibi runner: gender, six hair styles, seven accessories, outfit colors | Working |
-| Camera presets: Follow, Drone, Front, Side, Chase + intro orbit + finisher shot | Working |
+| Camera presets: Follow, Drone, Front, Side, Chase + intro orbit + finisher shot | Working; tight shots track at compressed video speed |
 | HUD: pace/HR/cadence/elevation, progress, distance, time, mini-map, km callouts | Working |
 | Finisher recap card and duel scoreboard | Working |
 | 1 vs 1 race: second activity, ghost placement, live gap, result by time or pace | Working |
@@ -119,7 +119,7 @@ flowchart LR
 ## Verification
 
 ```sh
-npm test        # 27 tests: domain, Strava parser, OAuth bridge, Overpass, geometry
+npm test        # 30 tests: domain, Strava, Overpass, geometry, camera tracking
 npm run build   # typecheck client + server + production bundle
 ```
 

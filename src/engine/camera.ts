@@ -27,6 +27,8 @@ export class CameraDirector {
   private initialized = false;
   private finishPose = false;
   private distance = 100;
+  private heading = 0;
+  private headingReady = false;
 
   constructor(private readonly diorama: Diorama) {}
 
@@ -120,7 +122,18 @@ export class CameraDirector {
       }
     }
 
-    const follow = this.poseFor(preset, x, z, frame.runnerRotation, twoRunners);
+    if (!this.headingReady) {
+      this.heading = frame.runnerRotation;
+      this.headingReady = true;
+    } else {
+      const delta = Math.atan2(
+        Math.sin(frame.runnerRotation - this.heading),
+        Math.cos(frame.runnerRotation - this.heading),
+      );
+      this.heading += delta * Math.min(1, Math.max(0, dt) * 10);
+    }
+
+    const follow = this.poseFor(preset, x, z, this.heading, twoRunners);
     let desiredPosition = follow.position;
     let desiredTarget = follow.target;
 
@@ -134,10 +147,18 @@ export class CameraDirector {
       desiredTarget = orbit.target.clone().lerp(follow.target, blend);
     }
 
+    const tightShot =
+      preset === 'front_hero' || preset === 'side_profile' || preset === 'chase';
     if (!this.initialized) {
       this.position.copy(desiredPosition);
       this.target.copy(desiredTarget);
       this.initialized = true;
+    } else if (tightShot && frame.phase !== 'intro') {
+      // The video clock compresses a whole run into seconds, so a tight shot
+      // cannot exponential-lerp: at ~200 m/s the lag exceeds the 14-19 m
+      // camera distance and the avatar leaves the frame. Track directly.
+      this.position.copy(desiredPosition);
+      this.target.copy(desiredTarget);
     } else {
       const rate = this.finishPose ? 8.5 : preset === 'drone' ? 5 : 8;
       const alpha = 1 - Math.exp(-rate * Math.max(0, dt));
