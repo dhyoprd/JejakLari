@@ -197,7 +197,10 @@ These require secrets/third-party services, so the local port puts an Express br
   `read,activity:read_all`; only Run/TrailRun/VirtualRun are listed.
 - **Overpass:** `server/overpass-service.ts` validates the padded route bbox, sends an identifying
   User-Agent, queries one endpoint at a time, caches for an hour, deduplicates in-flight requests,
-  caps buildings at 1,200, and falls back from `maps.mail.ru` to `overpass-api.de`.
+  caps buildings at 1,200, and falls back from the Asia mirror `ovp.dresel.systems/api-as` to
+  `maps.mail.ru` and `overpass-api.de`. Empty regional results fall through to the next endpoint;
+  a failed refresh serves the last cached result with `stale: true`, and HTML gateway bodies are
+  reduced to `host: timeout (504)`.
   `src/engine/osm.ts` merges footprints into one vertex-colored wall/roof mesh.
 - **Not bridged:** Photon/ArcGIS reverse geocoding, OSM road/area layers, the Android waitlist
   Apps Script, and Cloudflare analytics. Tiles are fetched directly from CORS-enabled providers.
@@ -251,8 +254,9 @@ VPN route, not a disabled client check.
   map tiles are still fetched directly from CORS-enabled providers.
 - **Strava tokens are memory-only**: restarting the server requires reconnecting. The client secret
   never reaches the browser.
-- **Overpass is best-effort**: public instances are saturated and regional mirrors lack Jakarta data;
-  `maps.mail.ru` is the default, `overpass-api.de` the fallback. Failure leaves a usable map.
+- **Overpass is best-effort**: public instances are saturated; the Asia mirror is primary for this
+  local port, with global `maps.mail.ru` / `overpass-api.de` fallbacks. A failed refresh reuses the
+  last result for the area; without cache the map stays usable and the panel reports a compact error.
 - **Default music is synthesized** (96 BPM, 4-chord loop) instead of the site's MP3 track.
 - **HUD is redrawn per frame** rather than cached; measured export completed 450 frames of 720p in
   ~2.0–2.5 s, including 1,200 OSM buildings.
@@ -265,11 +269,11 @@ VPN route, not a disabled client check.
 
 See `docs/verification.md` for commands and exact ffprobe output. Summary:
 
-- 30 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser (coalesced abort), tight-camera tracking,
+- 32 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser/stale fallback (coalesced abort), tight-camera tracking,
   and merged building geometry.
 - MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s; buildings enabled.
 - WebM fallback probed as VP9 + Opus at 720×1280.
-- Live Overpass load produced 1,200 buildings; toggling the layer changed the WebGL frame hash.
+- Live Overpass load produced 1,200 buildings in 2.3 s; toggling the layer changed the WebGL frame hash; stopping the server kept the buildings with a `data OSM terakhir` status.
 - Offline map, file upload, Strava UI import (intercepted API), and production server paths verified.
 - Real Strava consent/revocation was not run because no credentials exist in this workspace; the
   mock exercises the same OAuth/token/stream contract.

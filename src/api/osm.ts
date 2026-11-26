@@ -5,13 +5,18 @@ const PAD_METERS = 130;
 const MAX_SPAN_DEGREES = 0.25;
 const MAX_AREA_DEGREES = 0.03;
 const CACHE_LIMIT = 8;
-const cache = new Map<string, OsmBuilding[]>();
+const cache = new Map<string, OsmLoadResult>();
 
 export interface OsmBbox {
   south: number;
   west: number;
   north: number;
   east: number;
+}
+
+export interface OsmLoadResult {
+  buildings: OsmBuilding[];
+  stale: boolean;
 }
 
 function bboxFor(diorama: Diorama): OsmBbox {
@@ -51,7 +56,7 @@ export async function fetchOsmBuildings(
   diorama: Diorama,
   signal: AbortSignal,
   force = false,
-): Promise<OsmBuilding[]> {
+): Promise<OsmLoadResult> {
   const bbox = bboxFor(diorama);
   const spanLat = bbox.north - bbox.south;
   const spanLng = bbox.east - bbox.west;
@@ -79,6 +84,8 @@ export async function fetchOsmBuildings(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    const cached = cache.get(key);
+    if (cached) return { ...cached, stale: true };
     throw new Error('Server OSM tidak aktif. Jalankan server lokal (npm run dev).');
   }
 
@@ -96,15 +103,32 @@ export async function fetchOsmBuildings(
       body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
         ? body.error
         : `Overpass HTTP ${response.status}`;
+    const cached = cache.get(key);
+    if (cached) return { ...cached, stale: true };
     throw new Error(message);
   }
-  if (!parsed) throw new Error('Respons OSM tidak valid.');
-
-  const buildings = parseBuildings(body);
-  if (cache.size >= CACHE_LIMIT) {
-    const oldest = cache.keys().next().value;
-    if (oldest) cache.delete(oldest);
+  if (!parsed) {
+    const cached = cache.get(key);
+    if (cached) return { ...cached, stale: true };
+    throw new Error('Respons OSM tidak valid.');
   }
-  cache.set(key, buildings);
-  return buildings;
+
+  let buildings: OsmBuilding[];
+  try {
+    buildings = parseBuildings(body);
+  } catch (error) {
+    const cached = cache.get(key);
+    if (cached) return { ...cached, stale: true };
+    throw error;
+  }
+  const stale = Boolean(body && typeof body === 'object' && 'stale' in body && body.stale === true);
+  const result: OsmLoadResult = { buildings, stale };
+  if (!stale) {
+    if (cache.size >= CACHE_LIMIT) {
+      const oldest = cache.keys().next().value;
+      if (oldest) cache.delete(oldest);
+    }
+    cache.set(key, result);
+  }
+  return result;
 }

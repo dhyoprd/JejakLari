@@ -1110,6 +1110,10 @@ input[type='range']::-moz-range-thumb {
   background: var(--rose);
 }
 
+.status-dot.stale {
+  background: var(--amber);
+}
+
 @keyframes pulse-dot {
   50% {
     opacity: 0.25;

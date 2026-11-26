@@ -16,4 +16,5 @@ export interface OsmBuildingsResponse {
   truncated: boolean;
   fetchedAt: string;
   cached?: boolean;
+  stale?: boolean;
 }

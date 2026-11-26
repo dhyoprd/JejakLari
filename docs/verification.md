@@ -9,7 +9,7 @@ on `127.0.0.1`.
 ```text
 $ npx vitest run
 Test Files  5 passed (5)
-     Tests  30 passed (30)
+     Tests  32 passed (32)
 
 $ npx tsc --noEmit
 (no output, exit 0)
@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,274.48 kB │ gzip: 334.93 kB
+dist/assets/index-*.js          1,275.12 kB │ gzip: 335.09 kB
 ✓ built in ~256 ms
 ```
 
@@ -33,6 +33,9 @@ Coverage:
 - Overpass parser (height/levels/color/no-building), cache hit, truncation, oversized bbox 400,
   HTTP endpoint caching/refresh (including explicit `refresh: true`) and validation, coalesced
   queries surviving a caller abort, and post-abort dedupe while the shared query completes.
+- Stale fallback: after a successful query and TTL expiry, a 504 HTML gateway response returns the
+  cached buildings with `stale: true`; a 504 with no cache throws a message containing `504` and no
+  `<`/HTML markup.
 - OSM merged building geometry: wall/roof triangles, height bounds, `DoubleSide`/vertex colors,
   degenerate input.
 - Tight camera presets: Front/Side/Chase keep a runner moving at 220 video m/s within 24 m of the
@@ -67,15 +70,19 @@ at **440.0 Hz**, confirming the uploaded track (not the synth) was encoded.
 
 ### OSM buildings (live Overpass)
 
-With a 5 km GBK route and the default `maps.mail.ru` endpoint:
+With a 5 km GBK route and the default Asia mirror `ovp.dresel.systems/api-as`:
 
-- Server returned 1,200 normalized buildings (cap reached; `truncated` true).
+- Server returned 1,200 normalized buildings in 2.3 s (cap reached; `truncated` true).
 - Panel reported `1200 bangunan 3D aktif`; the scene added the merged mesh.
 - Toggling the building checkbox changed the WebGL frame hash (`1790335436` → `2850030125`),
   proving the mesh contributes to the rendered frame.
 - Export with buildings enabled completed in ≈2.0 s; no console errors.
+- After stopping the test server, `Muat ulang OSM` kept all 1,200 buildings and changed the status to
+  `1200 bangunan (data OSM terakhir)` with no red error line.
 - Endpoint behavior was checked against alternates; `overpass.osm.ch`, `overpass.maprva.org`, and
-  `overpass.osm.lat` are regional extracts that return no Jakarta data; `maps.mail.ru` returned 16
+  `overpass.osm.lat` are regional extracts that return no Jakarta data; the Asia mirror returned
+  buildings in 3 s, while `overpass.private.coffee`, `overpass.nchc.org.tw`, and
+  `overpass.openstreetmap.ru` timed out or did not resolve. `maps.mail.ru` returned 16
   elements for a small test bbox in 14 s. `overpass-api.de` was intermittently at capacity.
 
 ### Strava bridge and UI
@@ -126,7 +133,8 @@ Manual review (the configured automated security reviewer failed at the model ga
 - Strava routes require a session for activities/streams; IDs are validated; errors are bounded.
 - Overpass: bbox validated (span/area), one query at a time, in-flight dedupe, one-hour cache,
   identifying User-Agent, building cap; a caller abort stops that caller's wait while the shared
-  query completes and caches for the next request.
+  query completes and caches for the next request. Gateway bodies are stripped to bounded status
+  text, and an expired cache entry is retained for stale fallback instead of being deleted.
 - ZIP/GZ: supported-entry filter before decompression, max depth 2, 120 entries, 32 MB/entry,
   64 MB total, 32 MB gzip output; 40 MB input cap.
 - No `innerHTML`, `dangerouslySetInnerHTML`, `eval`; names render as React text or canvas text.

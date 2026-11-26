@@ -119,7 +119,7 @@ flowchart LR
 ## Verification
 
 ```sh
-npm test        # 30 tests: domain, Strava, Overpass, geometry, camera tracking
+npm test        # 32 tests: domain, Strava, Overpass, geometry, camera tracking
 npm run build   # typecheck client + server + production bundle
 ```
 
@@ -133,7 +133,7 @@ Rendered and probed end to end in Chromium:
 | 12 s fallback | VP9 + Opus WebM, 720×1280 |
 | Offline map | "Peta offline" fallback canvas, app remains usable |
 | Header upload while another tab is open | File chooser + FIT parse verified |
-| Overpass live | 1,200 buildings loaded; toggle changed the WebGL frame hash; coalesced abort and cache tests pass; 15 s export with buildings ~2 s |
+| Overpass live | 1,200 buildings loaded in 2.3 s from the Asia mirror; toggle changed the WebGL frame hash; stale-cache and sanitized-504 tests pass; 15 s export with buildings ~2 s |
 | Strava bridge | Mock OAuth: auth URL/state, token exchange, run filtering, streams, single-flight refresh, revoke, disconnect, origin guard |
 | Strava UI | Intercepted status/list/streams responses; import replaced the activity and normalized 4.2 km |
 | Production server | Built `dist/` served with API status 200 and SPA fallback HTML |
@@ -164,10 +164,14 @@ Buildings are one merged, vertex-colored mesh; the toggle removes/re-adds it wit
 scene. Area is capped (0.25° span, 0.03 deg²), responses at 1,200 buildings, and the server runs one
 Overpass query at a time.
 
-Defaults: `maps.mail.ru` Overpass endpoint, falling back to `overpass-api.de`; override with
-`OVERPASS_URL` / `OVERPASS_FALLBACK_URL` and identify the app with `OVERPASS_USER_AGENT`. If both
-fail, the route still renders and the panel reports the failure with a retry. Wait for the
-`bangunan 3D aktif` status before exporting; a render started during the query omits buildings.
+Defaults: the Asia mirror `ovp.dresel.systems/api-as`, falling back to `maps.mail.ru` and
+`overpass-api.de`; override with `OVERPASS_URL` / `OVERPASS_FALLBACK_URL` (fallbacks are
+comma-separated) and identify the app with `OVERPASS_USER_AGENT`. An empty result from a regional
+mirror falls through to the next endpoint. A failed refresh reuses the last cached result for the
+same area and the panel says `data OSM terakhir`; provider errors are reduced to
+`host: timeout (504)` instead of raw HTML. If no cached result exists, the route still renders and
+the panel reports the compact failure with a retry. Wait for the `bangunan 3D aktif` status before
+exporting; a render started during the query omits buildings.
 OSM data is ODbL; respect the public instance usage policies (cache, no parallel bulk scripts).
 
 ## Browser and network notes

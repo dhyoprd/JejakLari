@@ -157,6 +157,56 @@ describe('Overpass service', () => {
     expect(queryCount).toBe(1);
   });
 
+  it('returns the last cached buildings when a refresh gets a 504', async () => {
+    let now = 1_000_000;
+    let calls = 0;
+    const mock = await startServer(async (requestMessage, response) => {
+      calls += 1;
+      if (calls === 1) {
+        await mockOverpass(requestMessage, response);
+        return;
+      }
+      response.writeHead(504, { 'Content-Type': 'text/html' });
+      response.end('<?xml version="1.0"?><html><body>gateway timeout</body></html>');
+    });
+    servers.push(mock);
+    const service = new OverpassService({
+      endpoint: `${mock.baseUrl}/api/interpreter`,
+      fallbackEndpoint: '',
+      requestTimeoutMs: 3000,
+      cacheTtlMs: 1000,
+      now: () => now,
+    });
+    const bbox = { south: -6.205, west: 106.795, north: -6.19, east: 106.81 };
+    const first = await service.getBuildings(bbox);
+    expect(first.buildings).toHaveLength(2);
+    now += 5000;
+    const stale = await service.getBuildings(bbox);
+    expect(stale.stale).toBe(true);
+    expect(stale.buildings).toHaveLength(2);
+    expect(calls).toBe(2);
+  });
+
+  it('sanitizes an HTML gateway error when no cache exists', async () => {
+    const mock = await startServer((_requestMessage, response) => {
+      response.writeHead(504, { 'Content-Type': 'text/html' });
+      response.end('<?xml version="1.0"?><html><body>gateway timeout</body></html>');
+    });
+    servers.push(mock);
+    const service = new OverpassService({
+      endpoint: `${mock.baseUrl}/api/interpreter`,
+      fallbackEndpoint: '',
+      requestTimeoutMs: 3000,
+    });
+    await expect(
+      service.getBuildings({ south: -6.205, west: 106.795, north: -6.19, east: 106.81 }),
+    ).rejects.toSatisfy((error: Error) => {
+      expect(error.message).toContain('504');
+      expect(error.message).not.toContain('<');
+      return true;
+    });
+  });
+
   it('rejects an oversized bounding box', async () => {
     const service = new OverpassService({
       endpoint: 'http://127.0.0.1:1/api/interpreter',

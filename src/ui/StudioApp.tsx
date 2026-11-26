@@ -55,7 +55,7 @@ type Target = 'primary' | 'rival';
 type Tab = 'runner' | 'race' | 'map' | 'export';
 type MapStatus = 'idle' | 'loading' | 'ready' | 'fallback';
 type MusicMode = 'default' | 'upload' | 'none';
-type OsmStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+type OsmStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'stale' | 'error';
 
 interface ExportResultView {
   url: string;
@@ -154,6 +154,7 @@ export function StudioApp() {
   const rivalRef = useRef<Activity | null>(null);
   const previewAudioContextRef = useRef<AudioContext | null>(null);
   const osmForceRef = useRef(false);
+  const osmBuildingsRef = useRef<OsmBuilding[] | null>(null);
   const composerRef = useRef<FrameComposer | null>(null);
 
   const audioTrack = useMemo<AudioTrackProvider>(() => {
@@ -215,6 +216,7 @@ export function StudioApp() {
     setDiorama(points.length > 0 ? buildDiorama(points) : null);
     setMap(null);
     setMapStatus('loading');
+    osmBuildingsRef.current = null;
     setOsmBuildings(null);
     setOsmStatus('loading');
     setOsmError(null);
@@ -228,6 +230,7 @@ export function StudioApp() {
     setDiorama(primary ? buildDiorama(primary.timeline) : null);
     setMap(null);
     setMapStatus('loading');
+    osmBuildingsRef.current = null;
     setOsmBuildings(null);
     setOsmStatus('loading');
     setOsmError(null);
@@ -364,7 +367,12 @@ export function StudioApp() {
   }, [stravaStatus?.connected, loadStravaActivities]);
 
   useEffect(() => {
+    osmBuildingsRef.current = osmBuildings;
+  }, [osmBuildings]);
+
+  useEffect(() => {
     if (!diorama || !showBuildings) {
+      osmBuildingsRef.current = null;
       setOsmBuildings(null);
       setOsmStatus('idle');
       setOsmError(null);
@@ -378,16 +386,23 @@ export function StudioApp() {
     osmForceRef.current = false;
     void (async () => {
       try {
-        const buildings = await fetchOsmBuildings(diorama, controller.signal, force);
+        const result = await fetchOsmBuildings(diorama, controller.signal, force);
         if (cancelled) return;
-        setOsmBuildings(buildings);
-        setOsmStatus(buildings.length > 0 ? 'ready' : 'empty');
+        osmBuildingsRef.current = result.buildings;
+        setOsmBuildings(result.buildings);
+        setOsmStatus(result.stale ? 'stale' : result.buildings.length > 0 ? 'ready' : 'empty');
+        setOsmError(null);
       } catch (osmFetchError) {
         if (cancelled) return;
         if (osmFetchError instanceof DOMException && osmFetchError.name === 'AbortError') return;
-        setOsmBuildings(null);
-        setOsmStatus('error');
-        setOsmError(errorMessage(osmFetchError));
+        const hasCached = Boolean(osmBuildingsRef.current?.length);
+        if (!hasCached) setOsmBuildings(null);
+        setOsmStatus(hasCached ? 'stale' : 'error');
+        setOsmError(
+          hasCached
+            ? 'Gagal memperbarui OSM; memakai data bangunan terakhir.'
+            : errorMessage(osmFetchError),
+        );
       }
     })();
     return () => {
@@ -733,13 +748,15 @@ export function StudioApp() {
       ? 'Mengambil bangunan dari Overpass...'
       : osmStatus === 'ready'
         ? `${osmBuildings?.length ?? 0} bangunan 3D aktif`
-        : osmStatus === 'empty'
-          ? 'Tidak ada bangunan OSM di area ini'
-          : osmStatus === 'error'
-            ? 'Overpass tidak tersedia'
-            : showBuildings
-              ? 'Menunggu area rute...'
-              : 'Bangunan 3D nonaktif';
+        : osmStatus === 'stale'
+          ? `${osmBuildings?.length ?? 0} bangunan (data OSM terakhir)`
+          : osmStatus === 'empty'
+            ? 'Tidak ada bangunan OSM di area ini'
+            : osmStatus === 'error'
+              ? 'Overpass tidak tersedia'
+              : showBuildings
+                ? 'Menunggu area rute...'
+                : 'Bangunan 3D nonaktif';
   const osmDotClass =
     osmStatus === 'ready'
       ? 'ready'

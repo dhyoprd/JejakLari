@@ -73,7 +73,7 @@ server.listen(port, host, () => {
       : 'Strava bridge: disabled — set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET in .env',
   );
   console.log(
-    `Overpass: ${process.env.OVERPASS_URL ?? 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'}`,
+    `Overpass: ${process.env.OVERPASS_URL ?? 'https://ovp.dresel.systems/api-as/interpreter'}`,
   );
 });
 

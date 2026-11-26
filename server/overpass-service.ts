@@ -28,8 +28,9 @@ export class OverpassError extends Error {
   }
 }
 
-const DEFAULT_ENDPOINT = 'https://maps.mail.ru/osm/tools/overpass/api/interpreter';
-const DEFAULT_FALLBACK = 'https://overpass-api.de/api/interpreter';
+const DEFAULT_ENDPOINT = 'https://ovp.dresel.systems/api-as/interpreter';
+const DEFAULT_FALLBACK =
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass-api.de/api/interpreter';
 const USER_AGENT = 'JejakLariLocal/0.2 (local development; cached Overpass queries)';
 const BUILDING_COLORS = ['#cbd5e1', '#d8c7a8', '#b9c6d8', '#e0d6c8', '#aebdc9', '#cdbfae', '#d5dde5'];
 const MAX_CACHE_ENTRIES = 24;
@@ -174,6 +175,37 @@ function waitForResult<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T>
   ]);
 }
 
+function hostOf(endpoint: string): string {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return endpoint.slice(0, 40);
+  }
+}
+
+function responseFailure(status: number, body: string): string {
+  if (status === 429) return 'rate limit (429)';
+  if (status === 504) return 'timeout (504)';
+  if (status === 502 || status === 503) return `sibuk (${status})`;
+  const text = body
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return text ? `HTTP ${status}: ${text}` : `HTTP ${status}`;
+}
+
+function describeFailure(error: unknown): string {
+  if (error instanceof OverpassError) return error.message;
+  if (error instanceof Error) {
+    if (/fetch failed|ENOTFOUND|ECONN|EAI_AGAIN|network/i.test(error.message)) {
+      return 'tidak dapat dihubungi';
+    }
+    return error.message.slice(0, 80);
+  }
+  return 'gagal';
+}
+
 export class OverpassService {
   private readonly endpoints: string[];
   private readonly userAgent: string;
@@ -189,14 +221,17 @@ export class OverpassService {
 
   constructor(options: OverpassServiceOptions = {}) {
     const primary = options.endpoint ?? DEFAULT_ENDPOINT;
-    const fallback = options.fallbackEndpoint ?? DEFAULT_FALLBACK;
-    this.endpoints = [...new Set([primary, fallback].filter(Boolean))];
+    const fallbacks = (options.fallbackEndpoint ?? DEFAULT_FALLBACK)
+      .split(',')
+      .map((endpoint) => endpoint.trim())
+      .filter(Boolean);
+    this.endpoints = [...new Set([primary, ...fallbacks])];
     this.userAgent = options.userAgent ?? USER_AGENT;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.maxBuildings = options.maxBuildings ?? 1200;
     this.cacheTtlMs = options.cacheTtlMs ?? 60 * 60 * 1000;
     this.now = options.now ?? Date.now;
-    this.requestTimeoutMs = options.requestTimeoutMs ?? 45_000;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000;
   }
 
   async getBuildings(
@@ -212,7 +247,6 @@ export class OverpassService {
       if (cached && cached.expiresAt > this.now()) {
         return { ...cached.response, cached: true };
       }
-      if (cached) this.cache.delete(key);
     }
     const pending = this.inFlight.get(key);
     if (pending) return waitForResult(pending, options.signal);
@@ -229,7 +263,14 @@ export class OverpassService {
       },
     );
     this.inFlight.set(key, tracked);
-    return await waitForResult(tracked, options.signal);
+    try {
+      return await waitForResult(tracked, options.signal);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      const stale = this.cache.get(key);
+      if (stale) return { ...stale.response, cached: true, stale: true };
+      throw error;
+    }
   }
 
   private async queryAndCache(
@@ -238,8 +279,9 @@ export class OverpassService {
   ): Promise<OsmBuildingsResponse> {
     await this.acquire();
     try {
-      const query = `[out:json][timeout:40];way["building"](${bbox.south.toFixed(5)},${bbox.west.toFixed(5)},${bbox.north.toFixed(5)},${bbox.east.toFixed(5)});out tags geom 2000;`;
+      const query = `[out:json][timeout:30];way["building"](${bbox.south.toFixed(5)},${bbox.west.toFixed(5)},${bbox.north.toFixed(5)},${bbox.east.toFixed(5)});out tags geom 1500;`;
       const errors: string[] = [];
+      let emptyRegion: OsmBuildingsResponse | null = null;
       for (const endpoint of this.endpoints) {
         try {
           const payload = await this.request(endpoint, query);
@@ -250,13 +292,23 @@ export class OverpassService {
             truncated: parsed.truncated,
             fetchedAt: new Date(this.now()).toISOString(),
           };
+          if (parsed.buildings.length === 0) {
+            // Regional mirrors (e.g. api-as) return an empty set outside their
+            // coverage; try the next endpoint before accepting "no buildings".
+            emptyRegion ??= response;
+            continue;
+          }
           this.remember(key, response);
           return response;
         } catch (error) {
-          errors.push(error instanceof Error ? error.message : String(error));
+          errors.push(`${hostOf(endpoint)}: ${describeFailure(error)}`);
         }
       }
-      throw new OverpassError(502, `Overpass gagal: ${errors.join(' | ').slice(0, 300)}`);
+      if (emptyRegion) {
+        this.remember(key, emptyRegion);
+        return emptyRegion;
+      }
+      throw new OverpassError(502, `Overpass gagal: ${errors.join(' | ').slice(0, 260)}`);
     } finally {
       this.release();
     }
@@ -281,7 +333,7 @@ export class OverpassService {
     if (!response.ok) {
       throw new OverpassError(
         response.status === 429 ? 429 : 502,
-        `Overpass HTTP ${response.status}: ${body.slice(0, 180)}`,
+        responseFailure(response.status, body),
       );
     }
     try {
