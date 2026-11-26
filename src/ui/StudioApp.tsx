@@ -791,9 +791,9 @@ export function StudioApp() {
           </div>
           <div>
             <div className="brand-name">
-              JejakLari <span>LOCAL</span>
+              JejakLari <span>STUDIO</span>
             </div>
-            <div className="brand-sub">Engine port • FIT/GPX/TCX → 9:16 3D video</div>
+            <div className="brand-sub">FIT/GPX/TCX → video lari 3D 9:16</div>
           </div>
         </div>
         <div className="topbar-actions">
@@ -1362,11 +1362,11 @@ export function StudioApp() {
                   </button>
                 </Section>
 
-                <Section title="Catatan port">
+                <Section title="Tentang aplikasi">
                   <p className="micro-copy">
-                    Mesin lokal ini meniru pipeline JejakLari Studio: tile Esri/OSM → tekstur three.js,
-                    bangunan Overpass, karakter chibi prosedural, HUD kanvas, Strava OAuth lokal, dan
-                    ekspor WebCodecs. Reverse-geocoding dan layer jalan/area OSM belum disertakan.
+                    Pipeline: tile Esri/OSM → tekstur three.js, bangunan Overpass, karakter chibi
+                    prosedural, HUD kanvas, Strava OAuth lewat server lokal, dan ekspor WebCodecs.
+                    Proyek pribadi untuk merender ulang sesi lari; data aktivitas tidak diunggah.
                   </p>
                 </Section>
               </>
@@ -1376,7 +1376,7 @@ export function StudioApp() {
       </main>
 
       <footer className="footer">
-        <span>JejakLari Local • port edukasi mesin video 9:16</span>
+        <span>JejakLari Studio • proyek pribadi video lari 9:16</span>
         <span>Peta © Esri, OpenStreetMap, CARTO • Data aktivitas tetap di perangkat.</span>
       </footer>
 

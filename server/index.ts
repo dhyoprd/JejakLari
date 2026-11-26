@@ -66,7 +66,7 @@ if (!production) {
 }
 
 server.listen(port, host, () => {
-  console.log(`JejakLari Local: http://${host}:${port}`);
+  console.log(`JejakLari Studio: http://${host}:${port}`);
   console.log(
     strava
       ? `Strava bridge: enabled (${redirectUri})`

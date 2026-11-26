@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,275.12 kB │ gzip: 335.09 kB
+dist/assets/index-*.js          1,275.10 kB │ gzip: 335.06 kB
 ✓ built in ~256 ms
 ```
 

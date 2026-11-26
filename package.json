@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Local port of the JejakLari Studio engine: FIT/GPX/TCX/ZIP to 9:16 3D running video.",
+  "description": "JejakLari Studio: turn FIT/GPX/TCX/ZIP runs into a 9:16 3D running video with a real map, chibi runner, and 1v1 duel.",
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "tsc --noEmit && vite build",

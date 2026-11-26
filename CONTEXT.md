@@ -68,5 +68,5 @@ endpoint.
 
 Reverse-geocoded street/location names, OSM road/area layers, the multi-camera editor, and cloud
 waitlist/share/analytics. Strava tokens are intentionally not persisted; a server restart asks the
-user to reconnect. See `docs/jejaklari-engine.md` for observed original behavior and
+user to reconnect. See `docs/jejaklari-engine.md` for the engine notes and
 `docs/adr/0002-local-api-bridge.md` for the server decision.

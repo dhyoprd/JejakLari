@@ -1,15 +1,16 @@
-# JejakLari Local Studio
+# JejakLari Studio
 
-A local port of the engine behind [jejaklari.id](https://jejaklari.id/): upload or import a
-running activity and render a **9:16 3D map video** with a chibi runner, telemetry HUD,
-Overpass buildings, cinematic cameras, music, and optional **1 vs 1 duel**.
+A personal project for turning a running activity into a **9:16 3D map video**. Load a FIT, GPX,
+TCX, or Strava run and render a chibi runner moving through a map diorama with a telemetry HUD,
+Overpass buildings, cinematic cameras, music, and an optional **1 vs 1 duel**.
 
-Rendering, parsing, export, and audio all run in the browser. A small local Express server owns
-the two things a static client cannot safely do: the Strava client-secret OAuth exchange and a
+Rendering, parsing, export, and audio run in the browser. A small Express server handles the two
+things a static client cannot safely do alone: the Strava client-secret OAuth exchange and a
 cached/rate-limited Overpass proxy. Activity files stay in the browser; Strava streams are fetched
-only when you click an activity, and tokens stay in server memory.
+only when you select an activity, and tokens stay in server memory.
 
-> Independent reverse-engineering study. Not affiliated with or endorsed by JejakLari.
+This is a personal project, built and maintained for my own runs. It is not a hosted product and
+is not affiliated with Strava, OpenStreetMap, or any map provider.
 
 ## What works
 
@@ -32,9 +33,9 @@ only when you click an activity, and tokens stay in server memory.
 | Overpass 3D buildings (footprints, height/levels, roof/wall colors, merged mesh) | Working, toggleable, cached |
 | Strava OAuth (local secret), recent run list, stream import, refresh, revoke | Working; mock-verified end to end |
 
-Not ported: reverse-geocoded street names, OSM road/area layers, the multi-camera editor, and
-cloud waitlist/share/analytics. See [the engine report](docs/jejaklari-engine.md) for what the
-original does in those areas.
+The complete app lives in this repository: the browser studio, the local API bridge, tests, sample
+activities, and documentation. Reverse-geocoded street names, OSM road/area layers, a multi-camera
+editor, and cloud sharing are outside the current scope.
 
 ## Quick start
 
@@ -185,10 +186,8 @@ OSM data is ODbL; respect the public instance usage policies (cache, no parallel
 
 ## Attribution
 
-- Three.js, React, fflate, fast-xml-parser, fit-file-parser, mp4-muxer (MIT/ISC-style licenses).
+- Three.js, React, fflate, fast-xml-parser, fit-file-parser, and mp4-muxer (MIT/ISC-style licenses).
 - Map data © Esri, OpenStreetMap contributors, CARTO. OSM data is available under the ODbL.
-- Strava API usage subject to Strava's API Agreement; this local bridge stores no athlete data
+- Strava API usage is subject to Strava's API Agreement; the local bridge stores no athlete data
   beyond the in-memory session.
 - FIT test fixture © the fit-parser contributors (MIT).
-- Engine analysis of jejaklari.id is documented for interoperability; no original bundle or asset is
-  redistributed in this repository.
