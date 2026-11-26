@@ -176,7 +176,7 @@ Observed export pipeline:
 - Final frame is a 2D canvas: 3D render drawn first, then the HUD canvas.
 - Muxer chunk order may be audio-first; `firstTimestampBehavior: "offset"` aligns tracks.
 
-## 7. Backend and adjacent features (not ported)
+## 7. Backend and adjacent features (observed + local bridge)
 
 Observed endpoints/strings:
 
@@ -189,8 +189,18 @@ Observed endpoints/strings:
 - Cloudflare Web Analytics beacon.
 - `/audio/default-bgm.mp3` — bundled background track (not redistributed here).
 
-These require secrets/third-party services and are outside a local static port. The local app uses
-direct CORS-enabled tile URLs (verified) and a generated offline map when tiles fail.
+These require secrets/third-party services, so the local port puts an Express bridge in front:
+
+- **Strava:** `server/strava-service.ts` performs the authorization-code exchange, token refresh,
+  activity listing, stream fetch, and revoke. `server/strava-sessions.ts` keeps tokens in memory
+  keyed by an httpOnly session cookie; the browser only calls `/api/strava/*`. Scopes are
+  `read,activity:read_all`; only Run/TrailRun/VirtualRun are listed.
+- **Overpass:** `server/overpass-service.ts` validates the padded route bbox, sends an identifying
+  User-Agent, queries one endpoint at a time, caches for an hour, deduplicates in-flight requests,
+  caps buildings at 1,200, and falls back from `maps.mail.ru` to `overpass-api.de`.
+  `src/engine/osm.ts` merges footprints into one vertex-colored wall/roof mesh.
+- **Not bridged:** Photon/ArcGIS reverse geocoding, OSM road/area layers, the Android waitlist
+  Apps Script, and Cloudflare analytics. Tiles are fetched directly from CORS-enabled providers.
 
 ## 8. Evidence
 
@@ -226,19 +236,26 @@ VPN route, not a disabled client check.
 | 30 fps WebCodecs MP4 | `engine/exporter.ts`; 105 intro + 120 finish frames, same resolutions/bitrates |
 | AAC audio + mp4-muxer | Same codec path and muxer semantics; synthesized default track |
 | MediaRecorder fallback | `exportWebm` with VP9/VP8 + Opus, verified |
-| Strava/Overpass/geocoding | Not ported (backend/service dependencies); offline map + km callouts instead |
+| Strava OAuth, run list, streams | `server/strava-*` + `src/api/strava.ts` + `domain/parsers/strava.ts`; mock-tested |
+| Overpass buildings | `server/overpass-*` + `engine/osm.ts`; 1,200-building, cached, toggleable layer |
+| Reverse geocoding, OSM roads/areas | Not ported; km markers and coordinate fallback remain |
 
 ## 10. Differences and limitations
 
 - **No R3F**: the port uses a plain Three.js scene class. Behavior (geometry, camera math, scaling)
   is preserved; the component tree is not.
-- **No OSM buildings/roads or reverse geocoding**: map is a flat stitched raster. Km markers and HUD
+- **Buildings yes, roads/areas/geocoding no**: Overpass footprints are extruded into one mesh, but
+  OSM roads, parks/water, and reverse-geocoded street names are not ported. Km markers and HUD
   callouts remain.
-- **No `/api` backend**: tiles are fetched directly from providers (CORS verified). A proxy can be
-  added later if a provider blocks direct browser use.
+- **Local API bridge**: Strava OAuth and Overpass go through Express (`/api/strava`, `/api/osm`);
+  map tiles are still fetched directly from CORS-enabled providers.
+- **Strava tokens are memory-only**: restarting the server requires reconnecting. The client secret
+  never reaches the browser.
+- **Overpass is best-effort**: public instances are saturated and regional mirrors lack Jakarta data;
+  `maps.mail.ru` is the default, `overpass-api.de` the fallback. Failure leaves a usable map.
 - **Default music is synthesized** (96 BPM, 4-chord loop) instead of the site's MP3 track.
-- **HUD is redrawn per frame** rather than cached; measured export still completed 450 frames of
-  720p in ~2.5 s and 1080p in ~2.5 s on the test machine.
+- **HUD is redrawn per frame** rather than cached; measured export completed 450 frames of 720p in
+  ~2.0–2.5 s, including 1,200 OSM buildings.
 - **MediaRecorder WebM lacks a duration element** in Chromium until the file is seeked; MP4 is the
   primary path.
 - **Not a pixel-perfect clone**: colors, card spacing, and labels follow the observed design but are
@@ -248,7 +265,11 @@ VPN route, not a disabled client check.
 
 See `docs/verification.md` for commands and exact ffprobe output. Summary:
 
-- 13 unit tests pass (GPX/TCX/FIT/ZIP/gzip, multi-lap totals, inference, geo, race).
-- MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s.
+- 27 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser (coalesced abort),
+  and merged building geometry.
+- MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s; buildings enabled.
 - WebM fallback probed as VP9 + Opus at 720×1280.
-- Offline map and file-upload paths exercised in Chromium.
+- Live Overpass load produced 1,200 buildings; toggling the layer changed the WebGL frame hash.
+- Offline map, file upload, Strava UI import (intercepted API), and production server paths verified.
+- Real Strava consent/revocation was not run because no credentials exist in this workspace; the
+  mock exercises the same OAuth/token/stream contract.

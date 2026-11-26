@@ -15,6 +15,7 @@ export interface RawActivity {
   points: RawTrackPoint[];
   sessionDistanceMeters?: number | null;
   sessionDurationSec?: number | null;
+  source?: 'file' | 'strava';
 }
 
 export interface ActivityPoint {
@@ -47,6 +48,7 @@ export interface Activity {
   timeline: ActivityPoint[];
   missingTimestamps: boolean;
   startTimeMs: number;
+  source: 'file' | 'strava';
 }
 
 

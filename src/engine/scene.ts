@@ -6,6 +6,8 @@ import { compareRace, type RaceOutcome } from '../domain/race';
 import { buildRoute, interpolateActivity, sampleRoute, type Diorama, type RoutePoint } from './geo';
 import { RunnerModel } from './runner';
 import type { CameraPreset, RunnerLook, SkyMode } from './theme';
+import { buildOsmBuildingsMesh } from './osm';
+import type { OsmBuilding } from '../shared/osm';
 import { SKY_PALETTES } from './theme';
 import type { StitchedMap } from './tiles';
 
@@ -18,6 +20,7 @@ export interface SceneOptions {
   rivalLook: RunnerLook;
   sky: SkyMode;
   preset: CameraPreset;
+  osmBuildings?: OsmBuilding[] | null;
 }
 
 export interface FrameSnapshot {
@@ -183,6 +186,7 @@ export class StudioScene {
   private readonly mapTexture: THREE.CanvasTexture;
   private readonly phase = new THREE.Group();
   private readonly cameraDirector: CameraDirector;
+  private osmGroup: THREE.Group | null = null;
   private cameraPreset: CameraPreset;
 
   constructor(options: SceneOptions) {
@@ -304,6 +308,22 @@ export class StudioScene {
     this.rival?.setTransform(start.x + 2, 1.15, start.z, 0);
     this.primary.setDisplayScale(6);
     this.rival?.setDisplayScale(6);
+    this.setOsmBuildings(options.osmBuildings ?? null);
+  }
+
+  setOsmBuildings(buildings: OsmBuilding[] | null): void {
+    if (this.osmGroup) {
+      disposeObjectTree(this.osmGroup);
+      this.scene.remove(this.osmGroup);
+      this.osmGroup = null;
+    }
+    if (!buildings || buildings.length === 0) return;
+    const mesh = buildOsmBuildingsMesh(buildings, this.options.diorama);
+    if (!mesh) return;
+    this.osmGroup = new THREE.Group();
+    this.osmGroup.name = 'osm-buildings';
+    this.osmGroup.add(mesh);
+    this.scene.add(this.osmGroup);
   }
 
   private addKilometerMarkers(): void {

@@ -18,6 +18,7 @@ export interface HudOptions {
   outcome: RaceOutcome | null;
   mapStyle: MapStyleId;
   skyLabel: string;
+  osmActive?: boolean;
 }
 
 const COLORS = {
@@ -77,9 +78,11 @@ export class HudRenderer {
   private readonly options: HudOptions;
   private readonly minimapBounds: { minX: number; minZ: number; maxX: number; maxZ: number };
   private logoGradient: CanvasGradient | null = null;
+  private osmActive: boolean;
 
   constructor(options: HudOptions) {
     this.options = options;
+    this.osmActive = Boolean(options.osmActive);
     let minX = Infinity;
     let minZ = Infinity;
 
@@ -111,6 +114,10 @@ export class HudRenderer {
     this.options.primaryLook = primaryLook;
     this.options.rivalLook = rivalLook;
     this.options.outcome = outcome;
+  }
+
+  setOsmActive(active: boolean): void {
+    this.osmActive = active;
   }
 
   draw(
@@ -780,10 +787,14 @@ export class HudRenderer {
     fs: (value: number) => number,
   ): void {
     const style = MAP_STYLES[this.options.mapStyle];
+    const credits = [style.attribution];
+    if (this.osmActive) credits.push('BANGUNAN © OSM');
+    if (this.options.activity.source === 'strava') credits.push('DATA © STRAVA');
+    credits.push('GPS MILIK PENGGUNA');
     ctx.fillStyle = 'rgba(226,232,240,0.42)';
     ctx.font = `600 ${fs(6.4)}px system-ui, sans-serif`;
     ctx.textAlign = 'right';
-    ctx.fillText(`${style.attribution} • DATA GPS MILIK PENGGUNA`, width - fs(20), height - fs(6));
+    ctx.fillText(credits.join(' • '), width - fs(20), height - fs(6));
     ctx.textAlign = 'left';
   }
 }

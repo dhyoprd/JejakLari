@@ -262,5 +262,6 @@ export function normalizeActivity(raw: RawActivity, options: NormalizeOptions = 
     timeline,
     missingTimestamps: !times,
     startTimeMs: startMs,
+    source: raw.source ?? 'file',
   };
 }

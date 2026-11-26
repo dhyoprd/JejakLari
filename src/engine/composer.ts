@@ -8,6 +8,7 @@ import type { CameraPreset, RunnerLook, SkyMode } from './theme';
 import { SKY_PALETTES } from './theme';
 import type { FrameState } from './timeline';
 import type { MapStyleId, StitchedMap } from './tiles';
+import type { OsmBuilding } from '../shared/osm';
 
 export interface ComposerOptions {
   activity: Activity;
@@ -19,6 +20,7 @@ export interface ComposerOptions {
   sky: SkyMode;
   preset: CameraPreset;
   mapStyle: MapStyleId;
+  osmBuildings?: OsmBuilding[] | null;
   width: number;
   height: number;
 }
@@ -60,6 +62,7 @@ export class FrameComposer {
       rivalLook: options.rivalLook,
       sky: options.sky,
       preset: options.preset,
+      osmBuildings: options.osmBuildings ?? null,
     };
     this.scene = new StudioScene(sceneOptions);
 
@@ -81,6 +84,7 @@ export class FrameComposer {
       outcome: this.scene.outcome,
       mapStyle: options.mapStyle,
       skyLabel: SKY_PALETTES[options.sky].label,
+      osmActive: Boolean(options.osmBuildings?.length),
     });
   }
 
@@ -113,6 +117,11 @@ export class FrameComposer {
 
   setPreset(preset: CameraPreset): void {
     this.scene.setPreset(preset);
+  }
+
+  setOsmBuildings(buildings: OsmBuilding[] | null): void {
+    this.scene.setOsmBuildings(buildings);
+    this.hud.setOsmActive(Boolean(buildings?.length));
   }
 
   updateRunnerLooks(primaryLook: RunnerLook, rivalLook: RunnerLook, outcome: RaceOutcome | null): void {

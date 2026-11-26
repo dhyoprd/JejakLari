@@ -5,6 +5,7 @@ import { compareRace } from '../domain/race';
 import { formatClock } from '../domain/format';
 import { normalizeActivity } from '../domain/normalize';
 import { parseActivityBytes, parseActivityFile } from '../domain/parsers';
+import { parseStravaStreams } from '../domain/parsers/strava';
 import {
   SilentAudioTrack,
   SynthAudioTrack,
@@ -38,12 +39,23 @@ import {
   type StitchedMap,
 } from '../engine/tiles';
 import { frameStateAt } from '../engine/timeline';
+import { fetchOsmBuildings } from '../api/osm';
+import {
+  disconnectStrava,
+  fetchStravaActivities,
+  fetchStravaStatus,
+  fetchStravaStreams,
+} from '../api/strava';
+import type { OsmBuilding } from '../shared/osm';
+import type { StravaActivitySummary, StravaStatus } from '../shared/strava';
 import { ChipGroup, Field, Section, Swatches } from './controls';
+import { StravaSection } from './StravaSection';
 
 type Target = 'primary' | 'rival';
 type Tab = 'runner' | 'race' | 'map' | 'export';
 type MapStatus = 'idle' | 'loading' | 'ready' | 'fallback';
 type MusicMode = 'default' | 'upload' | 'none';
+type OsmStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
 interface ExportResultView {
   url: string;
@@ -103,6 +115,18 @@ export function StudioApp() {
   const [videoTime, setVideoTime] = useState(0);
   const [live, setLive] = useState<FrameSnapshot | null>(null);
 
+  const [osmBuildings, setOsmBuildings] = useState<OsmBuilding[] | null>(null);
+  const [osmStatus, setOsmStatus] = useState<OsmStatus>('idle');
+  const [osmError, setOsmError] = useState<string | null>(null);
+  const [showBuildings, setShowBuildings] = useState(true);
+  const [osmReload, setOsmReload] = useState(0);
+
+  const [stravaStatus, setStravaStatus] = useState<StravaStatus | null>(null);
+  const [stravaActivities, setStravaActivities] = useState<StravaActivitySummary[]>([]);
+  const [stravaLoading, setStravaLoading] = useState(false);
+  const [stravaError, setStravaError] = useState<string | null>(null);
+  const [stravaImportingId, setStravaImportingId] = useState<string | null>(null);
+
   const [musicMode, setMusicMode] = useState<MusicMode>('default');
   const [uploadedTrack, setUploadedTrack] = useState<UploadedAudioTrack | null>(null);
   const [musicName, setMusicName] = useState('');
@@ -129,6 +153,7 @@ export function StudioApp() {
   const activityRef = useRef<Activity | null>(null);
   const rivalRef = useRef<Activity | null>(null);
   const previewAudioContextRef = useRef<AudioContext | null>(null);
+  const osmForceRef = useRef(false);
 
   const audioTrack = useMemo<AudioTrackProvider>(() => {
     if (musicMode === 'none') return new SilentAudioTrack();
@@ -189,6 +214,9 @@ export function StudioApp() {
     setDiorama(points.length > 0 ? buildDiorama(points) : null);
     setMap(null);
     setMapStatus('loading');
+    setOsmBuildings(null);
+    setOsmStatus('loading');
+    setOsmError(null);
   }, []);
 
   const clearRival = useCallback(() => {
@@ -199,6 +227,9 @@ export function StudioApp() {
     setDiorama(primary ? buildDiorama(primary.timeline) : null);
     setMap(null);
     setMapStatus('loading');
+    setOsmBuildings(null);
+    setOsmStatus('loading');
+    setOsmError(null);
   }, []);
 
   const loadSample = useCallback(
@@ -243,6 +274,130 @@ export function StudioApp() {
     },
     [applyActivity],
   );
+
+  const refreshStravaStatus = useCallback(async () => {
+    try {
+      const next = await fetchStravaStatus();
+      setStravaStatus(next);
+      setStravaError(null);
+    } catch (statusError) {
+      setStravaStatus({ configured: false, connected: false });
+      setStravaError(errorMessage(statusError));
+    }
+  }, []);
+
+  const loadStravaActivities = useCallback(async () => {
+    setStravaLoading(true);
+    setStravaError(null);
+    try {
+      const response = await fetchStravaActivities(1, 30);
+      setStravaActivities(response.activities);
+    } catch (activityError) {
+      setStravaError(errorMessage(activityError));
+    } finally {
+      setStravaLoading(false);
+    }
+  }, []);
+
+  const handleStravaImport = useCallback(
+    async (summary: StravaActivitySummary) => {
+      const generation = ++loadGeneration.current;
+      setStravaImportingId(summary.id);
+      setStravaError(null);
+      setError(null);
+      setStatus(`Mengambil ${summary.name} dari Strava...`);
+      try {
+        const payload = await fetchStravaStreams(summary.id);
+        const raw = parseStravaStreams(payload);
+        const next = normalizeActivity(raw, { activityName: raw.name });
+        if (generation !== loadGeneration.current) return;
+        applyActivity(next, 'primary');
+        setStatus(
+          `${next.activityName} • ${next.totalDistanceKm.toFixed(2)} km • ${next.avgPaceFormatted}/km • Strava`,
+        );
+      } catch (importError) {
+        if (generation !== loadGeneration.current) return;
+        setStravaError(errorMessage(importError));
+        setStatus('Gagal mengambil aktivitas Strava');
+      } finally {
+        setStravaImportingId(null);
+      }
+    },
+    [applyActivity],
+  );
+
+  const handleStravaDisconnect = useCallback(async () => {
+    setStravaLoading(true);
+    setStravaError(null);
+    try {
+      await disconnectStrava();
+      setStravaActivities([]);
+      await refreshStravaStatus();
+    } catch (disconnectError) {
+      setStravaError(errorMessage(disconnectError));
+    } finally {
+      setStravaLoading(false);
+    }
+  }, [refreshStravaStatus]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stravaResult = params.get('strava');
+    if (stravaResult === 'connected') {
+      setStatus('Strava terhubung');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (stravaResult === 'error') {
+      const reason = params.get('reason') ?? 'oauth_failed';
+      setStravaError(`Otorisasi Strava gagal (${reason}).`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    void refreshStravaStatus();
+  }, [refreshStravaStatus]);
+
+  useEffect(() => {
+    if (!stravaStatus?.connected) {
+      setStravaActivities([]);
+      return;
+    }
+    void loadStravaActivities();
+  }, [stravaStatus?.connected, loadStravaActivities]);
+
+  useEffect(() => {
+    if (!diorama || !showBuildings) {
+      setOsmBuildings(null);
+      setOsmStatus('idle');
+      setOsmError(null);
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    setOsmStatus('loading');
+    setOsmError(null);
+    const force = osmForceRef.current;
+    osmForceRef.current = false;
+    void (async () => {
+      try {
+        const buildings = await fetchOsmBuildings(diorama, controller.signal, force);
+        if (cancelled) return;
+        setOsmBuildings(buildings);
+        setOsmStatus(buildings.length > 0 ? 'ready' : 'empty');
+      } catch (osmFetchError) {
+        if (cancelled) return;
+        if (osmFetchError instanceof DOMException && osmFetchError.name === 'AbortError') return;
+        setOsmBuildings(null);
+        setOsmStatus('error');
+        setOsmError(errorMessage(osmFetchError));
+      }
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [diorama, showBuildings, osmReload]);
+
+  useEffect(() => {
+    composer?.setOsmBuildings(showBuildings ? osmBuildings : null);
+  }, [composer, osmBuildings, showBuildings]);
 
   useEffect(() => {
     if (bootstrapped.current) return;
@@ -304,6 +459,7 @@ export function StudioApp() {
         sky,
         preset: presetRef.current,
         mapStyle,
+        osmBuildings: showBuildings ? osmBuildings : null,
         width: STAGE_WIDTH,
         height: STAGE_HEIGHT,
       });
@@ -450,6 +606,7 @@ export function StudioApp() {
         sky,
         preset,
         mapStyle,
+        osmBuildings: showBuildings ? osmBuildings : null,
         durationSec: duration,
         quality,
         audio: audioTrack,
@@ -546,6 +703,27 @@ export function StudioApp() {
     : exporting
       ? 'Menyiapkan ekspor...'
       : '';
+
+  const osmStatusText =
+    osmStatus === 'loading'
+      ? 'Mengambil bangunan dari Overpass...'
+      : osmStatus === 'ready'
+        ? `${osmBuildings?.length ?? 0} bangunan 3D aktif`
+        : osmStatus === 'empty'
+          ? 'Tidak ada bangunan OSM di area ini'
+          : osmStatus === 'error'
+            ? 'Overpass tidak tersedia'
+            : showBuildings
+              ? 'Menunggu area rute...'
+              : 'Bangunan 3D nonaktif';
+  const osmDotClass =
+    osmStatus === 'ready'
+      ? 'ready'
+      : osmStatus === 'loading'
+        ? 'loading'
+        : osmStatus === 'error'
+          ? 'error'
+          : '';
 
   return (
     <div className="app">
@@ -744,6 +922,18 @@ export function StudioApp() {
                   ) : null}
                 </Section>
 
+                <StravaSection
+                  status={stravaStatus}
+                  activities={stravaActivities}
+                  loading={stravaLoading}
+                  error={stravaError}
+                  importingId={stravaImportingId}
+                  onConnect={() => window.location.assign('/api/strava/auth')}
+                  onDisconnect={() => void handleStravaDisconnect()}
+                  onRefresh={() => void loadStravaActivities()}
+                  onImport={(summary) => void handleStravaImport(summary)}
+                />
+
                 <Section title="Identitas pelari">
                   <Field label="Nama pelari">
                     <input
@@ -911,6 +1101,42 @@ export function StudioApp() {
 
             {tab === 'map' ? (
               <>
+                <Section title="Bangunan 3D" hint="Overpass / OSM">
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={showBuildings}
+                      onChange={(event) => setShowBuildings(event.target.checked)}
+                    />
+                    Tampilkan bangunan 3D
+                  </label>
+                  <div className="osm-status">
+                    <span className={`status-dot ${osmDotClass}`} />
+                    <span>{osmStatusText}</span>
+                  </div>
+                  {osmError ? <p className="error-line">{osmError}</p> : null}
+                  <div className="row gap">
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        osmForceRef.current = true;
+                        setOsmReload((value) => value + 1);
+                      }}
+                      disabled={!showBuildings || osmStatus === 'loading'}
+                    >
+                      Muat ulang OSM
+                    </button>
+                    {osmBuildings && osmBuildings.length > 0 ? (
+                      <span className="micro-copy">tinggi {Math.round(Math.max(...osmBuildings.map((b) => b.heightMeters)))} m</span>
+                    ) : null}
+                  </div>
+                  <p className="micro-copy">
+                    Overpass di-cache server 1 jam; satu query per area rute. Bangunan mengikuti
+                    footprint dan tag tinggi OSM, lalu diekstrusi di atas peta.
+                  </p>
+                </Section>
+
                 <Section title="Gaya peta" hint="Tile nyata dari Esri/OSM">
                   <ChipGroup
                     value={mapStyle}
@@ -1098,8 +1324,8 @@ export function StudioApp() {
                 <Section title="Catatan port">
                   <p className="micro-copy">
                     Mesin lokal ini meniru pipeline JejakLari Studio: tile Esri/OSM → tekstur three.js,
-                    karakter chibi prosedural, HUD kanvas, dan ekspor WebCodecs. Strava OAuth, Overpass
-                    3D buildings, dan reverse-geocoding tidak disertakan.
+                    bangunan Overpass, karakter chibi prosedural, HUD kanvas, Strava OAuth lokal, dan
+                    ekspor WebCodecs. Reverse-geocoding dan layer jalan/area OSM belum disertakan.
                   </p>
                 </Section>
               </>

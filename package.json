@@ -5,23 +5,28 @@
   "type": "module",
   "description": "Local port of the JejakLari Studio engine: FIT/GPX/TCX/ZIP to 9:16 3D running video.",
   "scripts": {
-    "dev": "vite",
+    "dev": "tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --port 5187",
+    "preview": "tsx server/index.ts --production",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "tsx server/index.ts --production"
   },
   "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
     "fast-xml-parser": "^5.12.1",
     "fflate": "^0.8.3",
     "fit-file-parser": "^6.2.10",
     "mp4-muxer": "^5.2.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "three": "^0.187.0"
+    "three": "^0.187.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^26.6.10",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -30,5 +35,8 @@
     "typescript": "^5.9.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.2"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }
