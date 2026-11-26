@@ -431,7 +431,7 @@ export class StudioScene {
 
     const cameraDistance = this.cameraDirector.currentDistance;
     const displayScale = finishPose
-      ? 2.05
+      ? 2.75
       : Math.max(2.2, Math.min(55, 1.2 + 0.044 * Math.max(4, cameraDistance)));
     this.primary.setDisplayScale(displayScale);
     this.rival?.setDisplayScale(displayScale);

@@ -156,8 +156,11 @@ export class CameraDirector {
     let desiredTarget = follow.target;
 
     if (this.finishPose) {
-      desiredPosition = new THREE.Vector3(x, 4.25, z - 12.2);
-      desiredTarget = new THREE.Vector3(x, 4.25, z);
+      // Frame the whole finish pose, not a head-height horizontal shot. The
+      // target sits below the model centre so raised arms and feet both stay
+      // above the bottom recap card.
+      desiredPosition = new THREE.Vector3(x, 3.8, z - 10.5);
+      desiredTarget = new THREE.Vector3(x, 2.8, z);
     } else if (frame.phase === 'intro' && preset !== 'drone') {
       // A close, low three-quarter orbit. The old intro reused the drone
       // overview altitude (4+ km on a 1.9 km route), which read as a map

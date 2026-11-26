@@ -9,7 +9,7 @@ on `127.0.0.1`.
 ```text
 $ npx vitest run
 Test Files  5 passed (5)
-     Tests  33 passed (33)
+     Tests  34 passed (34)
 
 $ npx tsc --noEmit
 (no output, exit 0)
@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,274.23 kB │ gzip: 334.82 kB
+dist/assets/index-*.js          1,274.22 kB │ gzip: 334.82 kB
 ✓ built in ~256 ms
 ```
 
@@ -44,6 +44,8 @@ Coverage:
   the previous z15 (1,792×1,536, 4.75 m/px); 126 imagery/label tiles loaded in 3.7 s.
 - Intro camera starts at ~575 m on the 1.9 km sample instead of ~4,238 m; the finisher recap is a
   bottom card (top edge at ~80% solo, ~73% with a duel) and the old full-screen wash is gone.
+- Finisher framing: target y=2.8, camera 10.5 m away, runner scale 2.75; projected feet land at
+  ~68.5% and head at ~16% of frame height, above both recap-card variants.
 
 ## End-to-end browser verification
 

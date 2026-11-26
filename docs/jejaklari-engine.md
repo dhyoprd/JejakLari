@@ -129,11 +129,11 @@ Scene details observed:
 - Camera presets: high aerial follow (195 m behind, 420 m up, 32 m ahead target), drone/overview
   (distance derived from span), front hero (14 m), side profile (16.5 m), chase (19 m). Intro is a
   low three-quarter orbit (`span × 0.9`, capped at 2,400 m) that blends into follow; it starts around
-  575 m on the 1.9 km sample instead of the drone overview. Finisher uses a 12.2 m offset shot and
-  turns the runner toward the camera.
+  575 m on the 1.9 km sample instead of the drone overview. Finisher uses a 10.5 m offset shot with
+  a target at y=2.8 and turns the runner toward the camera.
 - Runner is a primitive-built chibi (head, torso, limbs, hair, accessories) scaled by camera
   distance: `clamp(1.2 + 0.044 × distance, 2.2, 85)` so the character stays readable at aerial
-  distances. Finisher pose raises arms and scales to ~2.05.
+  distances. Finisher pose raises arms and scales to ~2.75.
 - Accessories in the bundle: cap, headband, visor, trail vest with lamp, cat ears, bunny ears.
   Hair styles: undercut, spiky, side fade, bob, twintails, hijab. Jersey/shoe/skin colors are
   configurable. A canvas-baked BIB card floats above the runner.
@@ -273,7 +273,7 @@ VPN route, not a disabled client check.
 
 See `docs/verification.md` for commands and exact ffprobe output. Summary:
 
-- 33 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser/stale fallback (coalesced abort), tight-camera tracking and low intro altitude,
+- 34 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser/stale fallback (coalesced abort), tight-camera tracking, low intro altitude, and finisher framing,
   and merged building geometry.
 - MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s; buildings enabled.
 - WebM fallback probed as VP9 + Opus at 720×1280.

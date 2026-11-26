@@ -120,7 +120,7 @@ flowchart LR
 ## Verification
 
 ```sh
-npm test        # 33 tests: domain, Strava, Overpass, geometry, camera tracking
+npm test        # 34 tests: domain, Strava, Overpass, geometry, camera tracking
 npm run build   # typecheck client + server + production bundle
 ```
 
@@ -137,6 +137,7 @@ Rendered and probed end to end in Chromium:
 | Map tile density | 1.9 km sample uses z17 (2,304×1,792 texture, 1.19 m/px) instead of z15 (1,792×1,536, 4.75 m/px); 126 tiles loaded in 3.7 s |
 | Intro camera | 1.9 km route starts at ~575 m altitude instead of the ~4,238 m drone overview |
 | Finish layout | Recap card occupies the bottom ~20% solo / ~27% with a duel instead of a full-screen wash; runner and map stay visible |
+| Finisher framing | 2.75× runner at 10.5 m; body spans ~16–69% of the frame (feet above both card layouts) |
 | Overpass live | 1,200 buildings loaded in 2.3 s from the Asia mirror; toggle changed the WebGL frame hash; stale-cache and sanitized-504 tests pass; 15 s export with buildings ~2 s |
 | Strava bridge | Mock OAuth: auth URL/state, token exchange, run filtering, streams, single-flight refresh, revoke, disconnect, origin guard |
 | Strava UI | Intercepted status/list/streams responses; import replaced the activity and normalized 4.2 km |

@@ -42,6 +42,33 @@ describe('tight camera presets', () => {
     expect(camera.position.y).toBeGreaterThan(100);
   });
 
+  it('keeps the finisher above the recap card and inside the top edge', () => {
+    const director = new CameraDirector(DIORAMA);
+    const camera = CAMERA();
+    director.update(
+      camera,
+      1 / 30,
+      {
+        runnerX: 0,
+        runnerZ: 0,
+        runnerRotation: 0,
+        elapsedSec: 0,
+        phase: 'finish',
+        introProgress: 1,
+        finishProgress: 0.5,
+      },
+      'follow_runner',
+    );
+    camera.updateMatrixWorld();
+    const screenY = (y: number) =>
+      (1 - new THREE.Vector3(0, y, 0).project(camera).y) / 2;
+    const feet = screenY(1.23);
+    const head = screenY(5.54);
+    expect(feet).toBeLessThan(0.72);
+    expect(head).toBeGreaterThan(0.05);
+    expect(feet - head).toBeGreaterThan(0.4);
+  });
+
   it.each(['front_hero', 'side_profile', 'chase'] as const)(
     '%s keeps a runner moving at video speed inside the shot',
     (preset) => {
