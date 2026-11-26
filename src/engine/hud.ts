@@ -140,6 +140,14 @@ export class HudRenderer {
     ctx.fillStyle = topFade;
     ctx.fillRect(0, 0, width, fs(330));
 
+    this.drawBrand(ctx, width, fs);
+
+    if (snapshot.phase === 'intro') {
+      this.drawIntro(ctx, width, height, fs, introProgress);
+      this.drawAttribution(ctx, width, height, fs);
+      return;
+    }
+
     const bottomFade = ctx.createLinearGradient(0, height - fs(430), 0, height);
     bottomFade.addColorStop(0, 'rgba(2,6,23,0)');
     bottomFade.addColorStop(0.45, 'rgba(2,6,23,0.56)');
@@ -147,7 +155,6 @@ export class HudRenderer {
     ctx.fillStyle = bottomFade;
     ctx.fillRect(0, height - fs(430), width, fs(430));
 
-    this.drawBrand(ctx, width, fs);
     this.drawTitle(ctx, fs);
     this.drawMiniMap(ctx, width, height, fs, snapshot);
     this.drawStatsStrip(ctx, width, fs, snapshot);
@@ -156,9 +163,6 @@ export class HudRenderer {
     this.drawBottomCard(ctx, width, height, fs, snapshot);
     this.drawDuel(ctx, width, fs, snapshot);
 
-    if (snapshot.phase === 'intro') {
-      this.drawIntro(ctx, width, height, fs, introProgress);
-    }
     if (snapshot.phase === 'finish') {
       this.drawFinish(ctx, width, height, fs, finishProgress);
     }
@@ -552,22 +556,30 @@ export class HudRenderer {
     fs: (value: number) => number,
     introProgress: number,
   ): void {
-    const fadeIn = Math.min(1, introProgress * 4);
-    const fadeOut = 1 - Math.max(0, (introProgress - 0.72) / 0.28);
-    const alpha = Math.max(0, Math.min(1, fadeIn * fadeOut));
+    const alpha = 1 - Math.max(0, Math.min(1, (introProgress - 0.7) / 0.3));
     if (alpha <= 0.01) return;
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(2,6,23,0.58)';
-    ctx.fillRect(0, 0, width, height);
+    const y = height * 0.32;
+    const panelWidth = width * 0.84;
+    const panelHeight = fs(190);
+    const panelX = (width - panelWidth) / 2;
+    const panelY = y - fs(64);
+    roundedRect(ctx, panelX, panelY, panelWidth, panelHeight, fs(24));
+    ctx.fillStyle = 'rgba(2,6,23,0.62)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(45,212,191,0.28)';
+    ctx.lineWidth = fs(1.2);
+    ctx.stroke();
 
-    const y = height * 0.3;
-    const glow = ctx.createRadialGradient(width / 2, y, 10, width / 2, y, fs(260));
-    glow.addColorStop(0, 'rgba(45,212,191,0.28)');
+    const glow = ctx.createRadialGradient(width / 2, y, 10, width / 2, y, fs(230));
+    glow.addColorStop(0, 'rgba(45,212,191,0.16)');
     glow.addColorStop(1, 'rgba(45,212,191,0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(0, y - fs(260), width, fs(520));
+    ctx.beginPath();
+    roundedRect(ctx, panelX, panelY, panelWidth, panelHeight, fs(24));
+    ctx.fill();
 
     ctx.textAlign = 'center';
     ctx.fillStyle = COLORS.teal;
