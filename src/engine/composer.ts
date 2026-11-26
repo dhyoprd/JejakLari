@@ -30,11 +30,13 @@ export class FrameComposer {
   readonly scene: StudioScene;
   readonly canvas: HTMLCanvasElement;
   readonly hudCanvas: HTMLCanvasElement;
+  readonly displayCanvas: HTMLCanvasElement;
   readonly width: number;
   readonly height: number;
 
   private readonly hud: HudRenderer;
   private readonly hudContext: CanvasRenderingContext2D;
+  private readonly displayContext: CanvasRenderingContext2D;
 
   constructor(options: ComposerOptions) {
     this.width = options.width;
@@ -72,6 +74,13 @@ export class FrameComposer {
     const hudContext = this.hudCanvas.getContext('2d');
     if (!hudContext) throw new Error('Canvas 2D tidak tersedia untuk HUD');
     this.hudContext = hudContext;
+
+    this.displayCanvas = document.createElement('canvas');
+    this.displayCanvas.width = options.width;
+    this.displayCanvas.height = options.height;
+    const displayContext = this.displayCanvas.getContext('2d');
+    if (!displayContext) throw new Error('Canvas 2D tidak tersedia untuk preview');
+    this.displayContext = displayContext;
 
     this.hud = new HudRenderer({
       activity: options.activity,
@@ -115,6 +124,13 @@ export class FrameComposer {
     context.drawImage(this.hudCanvas, 0, 0, this.width, this.height);
   }
 
+  /** Compose WebGL + HUD into one canvas for preview / MediaRecorder. */
+  present(): void {
+    this.displayContext.clearRect(0, 0, this.width, this.height);
+    this.displayContext.drawImage(this.canvas, 0, 0, this.width, this.height);
+    this.displayContext.drawImage(this.hudCanvas, 0, 0, this.width, this.height);
+  }
+
   setPreset(preset: CameraPreset): void {
     this.scene.setPreset(preset);
   }
@@ -135,5 +151,7 @@ export class FrameComposer {
     this.renderer.forceContextLoss();
     this.hudCanvas.width = 0;
     this.hudCanvas.height = 0;
+    this.displayCanvas.width = 0;
+    this.displayCanvas.height = 0;
   }
 }

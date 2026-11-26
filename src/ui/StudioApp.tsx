@@ -469,8 +469,7 @@ export function StudioApp() {
       return;
     }
 
-    next.canvas.className = 'stage-gl';
-    next.hudCanvas.className = 'stage-hud';
+    next.displayCanvas.className = 'stage-gl';
     // Render one complete frame before swapping DOM nodes. Disposing the old
     // renderer first would blank its canvas and flash black during style/look
     // changes; the old composer is disposed only after the new frame is live.
@@ -480,6 +479,7 @@ export function StudioApp() {
         1 / 30,
         playingRef.current,
       );
+      next.present();
     } catch (renderError) {
       next.dispose();
       setError(`Gagal merender frame awal: ${errorMessage(renderError)}`);
@@ -487,7 +487,7 @@ export function StudioApp() {
     }
     const previous = composerRef.current;
     composerRef.current = next;
-    stage.replaceChildren(next.canvas, next.hudCanvas);
+    stage.replaceChildren(next.displayCanvas);
     previous?.dispose();
     setComposer(next);
     setStatus((current) =>
@@ -529,6 +529,7 @@ export function StudioApp() {
       }
       const state = frameStateAt(timeRef.current, duration, activity.totalDurationSec);
       const snapshot = composer.draw(state, delta, playingRef.current);
+      composer.present();
       if (now - lastUi > 120) {
         lastUi = now;
         setVideoTime(timeRef.current);

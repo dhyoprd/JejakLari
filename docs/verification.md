@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,272.98 kB │ gzip: 334.65 kB
+dist/assets/index-*.js          1,273.53 kB │ gzip: 334.76 kB
 ✓ built in ~256 ms
 ```
 
@@ -100,6 +100,10 @@ With a 5 km GBK route and the default `maps.mail.ru` endpoint:
   starts visible and only fades out. OCR of the resulting 488×869 stage frame found one title
   (`MORNING 5K TEMPO RUN`), not the previous HUD+intro duplicate; 25 samples around playback had
   0 dark frames.
+- Preview now composites WebGL + HUD into one 2D canvas instead of stacking two canvases. Thirty
+  40 ms samples had 0 dark frames; OCR of a mid-run stage capture found title, pace, distance, heart
+  rate, cadence, and time. The WebM fallback captures the same composed canvas: a 5 s frame OCRs
+  with the full HUD.
 - Production server on port 5189: `dist/` served, `/api/strava/status` 200 JSON, client route
   returned `text/html`, no console errors.
 

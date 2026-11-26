@@ -374,7 +374,7 @@ async function exportWebm(request: ExportRequest): Promise<ExportResult> {
   const totalFrames = frameCountForDuration(request.durationSec);
   const composer = new FrameComposer({ ...request, width, height });
 
-  const stream = composer.canvas.captureStream(VIDEO_FPS);
+  const stream = composer.displayCanvas.captureStream(VIDEO_FPS);
   let audioContext: AudioContext | null = null;
 
   if (request.audio && !request.audio.silent && !request.muted && request.volume > 0.001) {
@@ -433,6 +433,7 @@ async function exportWebm(request: ExportRequest): Promise<ExportResult> {
         }
         const state = frameStateAt(elapsed, request.durationSec, request.activity.totalDurationSec);
         composer.draw(state, 1 / VIDEO_FPS);
+        composer.present();
         request.onProgress?.({
           stage: 'video',
           frame: Math.floor(elapsed * VIDEO_FPS),
