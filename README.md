@@ -134,6 +134,7 @@ Rendered and probed end to end in Chromium:
 | 12 s fallback | VP9 + Opus WebM, 720×1280 |
 | Offline map | "Peta offline" fallback canvas, app remains usable |
 | Header upload while another tab is open | File chooser + FIT parse verified |
+| Map tile density | 1.9 km sample uses z17 (2,304×1,792 texture, 1.19 m/px) instead of z15 (1,792×1,536, 4.75 m/px); 126 tiles loaded in 3.7 s |
 | Overpass live | 1,200 buildings loaded in 2.3 s from the Asia mirror; toggle changed the WebGL frame hash; stale-cache and sanitized-504 tests pass; 15 s export with buildings ~2 s |
 | Strava bridge | Mock OAuth: auth URL/state, token exchange, run filtering, streams, single-flight refresh, revoke, disconnect, origin guard |
 | Strava UI | Intercepted status/list/streams responses; import replaced the activity and normalized 4.2 km |

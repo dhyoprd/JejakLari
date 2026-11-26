@@ -106,9 +106,11 @@ Observed map behavior:
   OSM + CARTO Voyager for **streets**; CyclOSM + OSM for **topo**; CARTO Dark Matter for **dark**.
 - Tiles are stitched into one large 2D canvas, with CSS-like filters per style (e.g. dark contrast,
   topo saturation, dark inversion fallback).
-- Base zoom is chosen from route span (16 for ≤ 1,050 m, 15 for ≤ 2,900 m, else 14), lowering the
-  zoom until the tile grid is at most 10×10 with a 1–2 tile margin.
-- Satellite additionally paints Esri transportation and boundaries tiles over imagery.
+- Tile zoom starts at 18 and lowers until the grid fits 12×12 (max 3,072 px per side), with a
+  1-tile margin at z17+ and 2 tiles below. The 1.9 km sample therefore uses z17 (1.19 m/px)
+  instead of z15; wider routes step down to 16/15 while keeping the route at high pixel density.
+- Satellite additionally paints Esri transportation and boundaries tiles over imagery; at z17+ only
+  the transportation overlay is drawn to keep the label request count bounded.
 - A same-origin `/api/map-tile?style=&z=&x=&y=&v=3` proxy is tried after direct tile URLs.
 - The stitched canvas becomes a `CanvasTexture` on a ground plane; route and props sit above it.
 - **OSM enrichment** (Overpass) fetches buildings/roads/areas along the route; caps observed at

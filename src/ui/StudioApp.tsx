@@ -1190,7 +1190,7 @@ export function StudioApp() {
                     columns={2}
                   />
                   <p className="micro-copy">
-                    Zoom dipilih otomatis dari luas rute. {mapStatus === 'fallback' ? 'Tile gagal dimuat — memakai peta offline.' : 'Atribusi peta tercetak di video.'}
+                    Zoom tile dipilih otomatis hingga detail maksimum. {mapStatus === 'fallback' ? 'Tile gagal dimuat — memakai peta offline.' : 'Atribusi peta tercetak di video.'}
                   </p>
                 </Section>
 

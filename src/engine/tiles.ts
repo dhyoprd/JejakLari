@@ -125,12 +125,8 @@ function metersPerPixel(lat: number, zoom: number): number {
   return (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
 }
 
-function chooseZoom(diorama: Diorama): number {
-  const span = Math.max(diorama.spanMetersX, diorama.spanMetersZ);
-  if (span <= 1050) return 16;
-  if (span <= 2900) return 15;
-  return 14;
-}
+const MAX_TILE_AXIS = 12;
+const MAX_TILE_ZOOM = 18;
 
 
 function loadImage(url: string, timeoutMs = 6500): Promise<HTMLImageElement | null> {
@@ -214,7 +210,7 @@ export async function stitchMap(
   signal?: AbortSignal,
 ): Promise<StitchedMap> {
   const style = MAP_STYLES[styleId];
-  let zoom = chooseZoom(diorama);
+  let zoom = MAX_TILE_ZOOM;
   let minX = 0;
   let maxX = 0;
   let minY = 0;
@@ -223,7 +219,7 @@ export async function stitchMap(
   let rows = 0;
 
   for (; zoom >= 10; zoom--) {
-    const margin = zoom >= 15 ? 2 : 1;
+    const margin = zoom >= 17 ? 1 : 2;
     const maxTile = 2 ** zoom - 1;
     const a = {
       x: lonToTileX(diorama.minLng, zoom),
@@ -239,7 +235,7 @@ export async function stitchMap(
     maxY = Math.min(maxTile, Math.max(a.y, b.y) + margin);
     cols = maxX - minX + 1;
     rows = maxY - minY + 1;
-    if (cols <= 10 && rows <= 10) break;
+    if (cols <= MAX_TILE_AXIS && rows <= MAX_TILE_AXIS) break;
   }
 
   const key = [
@@ -271,8 +267,9 @@ export async function stitchMap(
 
   const drawn = await drawTiles(ctx, tiles, style.base, zoom, style, minX, minY, signal, false);
   if (signal?.aborted) throw new DOMException('Tile stitch dibatalkan.', 'AbortError');
-  if (drawn > 0 && style.overlay.length > 0) {
-    await drawTiles(ctx, tiles, style.overlay, zoom, style, minX, minY, signal, true);
+  const overlays = zoom >= 17 && style.overlay.length > 1 ? style.overlay.slice(0, 1) : style.overlay;
+  if (drawn > 0 && overlays.length > 0) {
+    await drawTiles(ctx, tiles, overlays, zoom, style, minX, minY, signal, true);
   }
   if (signal?.aborted) throw new DOMException('Tile stitch dibatalkan.', 'AbortError');
 

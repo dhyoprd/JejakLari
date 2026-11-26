@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,275.10 kB │ gzip: 335.06 kB
+dist/assets/index-*.js          1,275.15 kB │ gzip: 335.05 kB
 ✓ built in ~256 ms
 ```
 
@@ -40,6 +40,8 @@ Coverage:
   degenerate input.
 - Tight camera presets: Front/Side/Chase keep a runner moving at 220 video m/s within 24 m of the
   look target across 120 simulated frames; heading smoothing is separate from position tracking.
+- Tile density: the 1.9 km Jakarta sample selects z17 (2,304×1,792 texture, 1.19 m/px) instead of
+  the previous z15 (1,792×1,536, 4.75 m/px); 126 imagery/label tiles loaded in 3.7 s.
 
 ## End-to-end browser verification
 
