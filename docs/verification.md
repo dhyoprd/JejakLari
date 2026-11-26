@@ -9,7 +9,7 @@ on `127.0.0.1`.
 ```text
 $ npx vitest run
 Test Files  5 passed (5)
-     Tests  32 passed (32)
+     Tests  33 passed (33)
 
 $ npx tsc --noEmit
 (no output, exit 0)
@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,275.15 kB │ gzip: 335.05 kB
+dist/assets/index-*.js          1,274.23 kB │ gzip: 334.82 kB
 ✓ built in ~256 ms
 ```
 
@@ -42,6 +42,8 @@ Coverage:
   look target across 120 simulated frames; heading smoothing is separate from position tracking.
 - Tile density: the 1.9 km Jakarta sample selects z17 (2,304×1,792 texture, 1.19 m/px) instead of
   the previous z15 (1,792×1,536, 4.75 m/px); 126 imagery/label tiles loaded in 3.7 s.
+- Intro camera starts at ~575 m on the 1.9 km sample instead of ~4,238 m; the finisher recap is a
+  bottom card (top edge at ~80% solo, ~73% with a duel) and the old full-screen wash is gone.
 
 ## End-to-end browser verification
 
@@ -57,7 +59,8 @@ Performed through the UI in headless Chromium, with real exports downloaded and 
 | 15 s with 1,200 OSM buildings | H.264 720×1280, 450 frames, AAC; export wall time ≈2.0 s |
 
 Frame analysis (raw RGB) confirms varied quantized colors, camera/route motion between frames,
-teal route/HUD pixels, the finisher overlay, and rival pixels in duel mode.
+teal route/HUD pixels, the finisher overlay (bottom card with the scene visible above it), and
+rival pixels in duel mode.
 
 ### WebM fallback
 

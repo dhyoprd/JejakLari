@@ -17,6 +17,31 @@ const DIORAMA: Diorama = {
 const CAMERA = () => new THREE.PerspectiveCamera(43, 9 / 16, 1, 30000);
 
 describe('tight camera presets', () => {
+  it('starts the intro at a low aerial instead of the drone overview', () => {
+    const director = new CameraDirector({
+      ...DIORAMA,
+      spanMetersX: 1878,
+      spanMetersZ: 1285,
+    });
+    const camera = CAMERA();
+    director.update(
+      camera,
+      1 / 30,
+      {
+        runnerX: -900,
+        runnerZ: 0,
+        runnerRotation: 0,
+        elapsedSec: 0,
+        phase: 'intro',
+        introProgress: 0,
+        finishProgress: 0,
+      },
+      'follow_runner',
+    );
+    expect(camera.position.y).toBeLessThan(800);
+    expect(camera.position.y).toBeGreaterThan(100);
+  });
+
   it.each(['front_hero', 'side_profile', 'chase'] as const)(
     '%s keeps a runner moving at video speed inside the shot',
     (preset) => {

@@ -127,9 +127,10 @@ Scene details observed:
 - Rendered as a glowing route ribbon with a dim full path, bright completed path, tip geometry,
   start/finish discs/beams, and km markers.
 - Camera presets: high aerial follow (195 m behind, 420 m up, 32 m ahead target), drone/overview
-  (distance derived from span), front hero (14 m), side profile (16.5 m), chase (19 m). Intro blends
-  from the overview into follow over the intro progress; finisher uses a 12.2 m offset shot (the original math keeps the world -Z offset and lets the
-  runner turn toward the camera).
+  (distance derived from span), front hero (14 m), side profile (16.5 m), chase (19 m). Intro is a
+  low three-quarter orbit (`span × 0.9`, capped at 2,400 m) that blends into follow; it starts around
+  575 m on the 1.9 km sample instead of the drone overview. Finisher uses a 12.2 m offset shot and
+  turns the runner toward the camera.
 - Runner is a primitive-built chibi (head, torso, limbs, hair, accessories) scaled by camera
   distance: `clamp(1.2 + 0.044 × distance, 2.2, 85)` so the character stays readable at aerial
   distances. Finisher pose raises arms and scales to ~2.05.
@@ -148,8 +149,9 @@ Observed HUD composition (2D canvas over the 3D frame):
 - A mini-map with full route, completed route, current dot, and rival dot.
 - Bottom card with a large distance readout, elapsed time, six telemetry tiles, and watermark.
 - Landmark pill near a km split (reverse-geocoded/landmark data).
-- Intro title card and a finisher recap card with medal, total time, distance, pace, average HR,
-  cadence, elevation, and duel result.
+- Intro title card and a compact bottom finisher recap with medal, total time, distance, pace,
+  average HR, cadence, elevation, and duel result. The recap leaves the scene visible above it;
+  the old full-screen wash and route-map panel are gone.
 - Duel header and live gap (`DUEL 1V1 • A VS B`, distance gap, winner/margin at the finish).
 - Static cards are cached; dynamic overlays are redrawn each frame.
 
@@ -271,7 +273,7 @@ VPN route, not a disabled client check.
 
 See `docs/verification.md` for commands and exact ffprobe output. Summary:
 
-- 32 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser/stale fallback (coalesced abort), tight-camera tracking,
+- 33 tests pass: domain, Strava streams/parser, Strava OAuth bridge (mock, single-flight refresh), Overpass cache/parser/stale fallback (coalesced abort), tight-camera tracking and low intro altitude,
   and merged building geometry.
 - MP4 (720p and 1080p) probed as H.264 + AAC, 450 frames at 15 s / 900 at 30 s; buildings enabled.
 - WebM fallback probed as VP9 + Opus at 720×1280.

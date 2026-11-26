@@ -1,6 +1,6 @@
 import type { Activity } from '../domain/activity';
 import type { RaceOutcome } from '../domain/race';
-import { formatClock, formatPace } from '../domain/format';
+import { formatClock } from '../domain/format';
 import type { Diorama, RoutePoint } from './geo';
 import type { FrameSnapshot } from './scene';
 import type { RunnerLook } from './theme';
@@ -9,7 +9,6 @@ import { MAP_STYLES } from './tiles';
 
 export interface HudOptions {
   activity: Activity;
-  rival: Activity | null;
   primaryLook: RunnerLook;
   rivalLook: RunnerLook;
   diorama: Diorama;
@@ -148,20 +147,30 @@ export class HudRenderer {
       return;
     }
 
-    const bottomFade = ctx.createLinearGradient(0, height - fs(430), 0, height);
-    bottomFade.addColorStop(0, 'rgba(2,6,23,0)');
-    bottomFade.addColorStop(0.45, 'rgba(2,6,23,0.56)');
-    bottomFade.addColorStop(1, 'rgba(2,6,23,0.88)');
-    ctx.fillStyle = bottomFade;
-    ctx.fillRect(0, height - fs(430), width, fs(430));
+    const finishFade =
+      snapshot.phase === 'finish'
+        ? 1 - easeOutCubic(Math.min(1, finishProgress * 2.4))
+        : 1;
+    if (finishFade > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = finishFade;
 
-    this.drawTitle(ctx, fs);
-    this.drawMiniMap(ctx, width, height, fs, snapshot);
-    this.drawStatsStrip(ctx, width, fs, snapshot);
-    this.drawProgress(ctx, width, fs, snapshot);
-    this.drawLandmark(ctx, width, height, fs, snapshot);
-    this.drawBottomCard(ctx, width, height, fs, snapshot);
-    this.drawDuel(ctx, width, fs, snapshot);
+      const bottomFade = ctx.createLinearGradient(0, height - fs(430), 0, height);
+      bottomFade.addColorStop(0, 'rgba(2,6,23,0)');
+      bottomFade.addColorStop(0.45, 'rgba(2,6,23,0.56)');
+      bottomFade.addColorStop(1, 'rgba(2,6,23,0.88)');
+      ctx.fillStyle = bottomFade;
+      ctx.fillRect(0, height - fs(430), width, fs(430));
+
+      this.drawTitle(ctx, fs);
+      this.drawMiniMap(ctx, width, height, fs, snapshot);
+      this.drawStatsStrip(ctx, width, fs, snapshot);
+      this.drawProgress(ctx, width, fs, snapshot);
+      this.drawLandmark(ctx, width, height, fs, snapshot);
+      this.drawBottomCard(ctx, width, height, fs, snapshot);
+      this.drawDuel(ctx, width, fs, snapshot);
+      ctx.restore();
+    }
 
     if (snapshot.phase === 'finish') {
       this.drawFinish(ctx, width, height, fs, finishProgress);
@@ -623,173 +632,159 @@ export class HudRenderer {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, 'rgba(2,6,23,0.9)');
-    gradient.addColorStop(0.55, 'rgba(2,6,23,0.92)');
-    gradient.addColorStop(1, 'rgba(2,6,23,0.96)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
     const activity = this.options.activity;
-    const cardWidth = width - fs(52);
-    const cardX = fs(26);
-    const cardY = fs(150);
-    const cardHeight = height - fs(300);
-    glass(ctx, cardX, cardY, cardWidth, cardHeight, fs(26), 'rgba(15,23,42,0.9)', 'rgba(251,191,36,0.5)', fs(1.8));
+    const outcome = this.options.outcome;
+    const cardWidth = width - fs(40);
+    const cardX = fs(20);
+    const cardHeight = fs(outcome ? 236 : 172);
+    const cardY = height - cardHeight - fs(24);
+    const top = cardY + fs(18);
+    const left = cardX + fs(20);
+    const right = cardX + cardWidth - fs(20);
+
+    // Only darken the lower part of the frame; the runner and map stay visible.
+    const gradient = ctx.createLinearGradient(0, cardY - fs(90), 0, height);
+    gradient.addColorStop(0, 'rgba(2,6,23,0)');
+    gradient.addColorStop(0.5, 'rgba(2,6,23,0.42)');
+    gradient.addColorStop(1, 'rgba(2,6,23,0.9)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, cardY - fs(90), width, height - cardY + fs(90));
+
+    glass(
+      ctx,
+      cardX,
+      cardY,
+      cardWidth,
+      cardHeight,
+      fs(22),
+      'rgba(15,23,42,0.88)',
+      'rgba(251,191,36,0.42)',
+      fs(1.4),
+    );
 
     ctx.textAlign = 'center';
-    const centerX = width / 2;
-    const medalY = cardY + fs(48);
-    const medal = ctx.createRadialGradient(centerX, medalY, 2, centerX, medalY, fs(36));
+    const medalX = left + fs(16);
+    const medalY = top + fs(16);
+    const medal = ctx.createRadialGradient(medalX, medalY, 2, medalX, medalY, fs(28));
     medal.addColorStop(0, 'rgba(251,191,36,0.35)');
     medal.addColorStop(1, 'rgba(251,191,36,0)');
     ctx.fillStyle = medal;
     ctx.beginPath();
-    ctx.arc(centerX, medalY, fs(36), 0, Math.PI * 2);
+    ctx.arc(medalX, medalY, fs(28), 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(centerX, medalY, fs(24), 0, Math.PI * 2);
+    ctx.arc(medalX, medalY, fs(17), 0, Math.PI * 2);
     ctx.strokeStyle = COLORS.amber;
-    ctx.lineWidth = fs(2);
+    ctx.lineWidth = fs(1.6);
     ctx.stroke();
     ctx.fillStyle = COLORS.amber;
-    ctx.font = `900 ${fs(18)}px system-ui, sans-serif`;
-    ctx.fillText('★', centerX, medalY + fs(6));
+    ctx.font = `900 ${fs(12)}px system-ui, sans-serif`;
+    ctx.fillText('★', medalX, medalY + fs(4));
 
+    ctx.textAlign = 'left';
     ctx.fillStyle = COLORS.amber;
-    ctx.font = `900 ${fs(10)}px system-ui, sans-serif`;
-    ctx.fillText('FINISHER', centerX, medalY + fs(48));
+    ctx.font = `900 ${fs(8.5)}px system-ui, sans-serif`;
+    ctx.fillText('FINISHER', left + fs(42), top + fs(12));
 
     ctx.fillStyle = COLORS.ink;
-    ctx.font = `900 ${fs(26)}px system-ui, sans-serif`;
-    ctx.fillText(this.options.primaryLook.name.toUpperCase().slice(0, 18), centerX, medalY + fs(82));
+    ctx.font = `900 ${fs(21)}px system-ui, sans-serif`;
+    ctx.fillText(
+      this.options.primaryLook.name.toUpperCase().slice(0, 16),
+      left + fs(42),
+      top + fs(35),
+    );
+
     ctx.fillStyle = COLORS.muted;
-    ctx.font = `700 ${fs(8.5)}px system-ui, sans-serif`;
-    ctx.fillText(`BIB #${this.options.primaryLook.bib || '0000'} • ${activity.dateFormatted}`, centerX, medalY + fs(98));
+    ctx.font = `700 ${fs(7.4)}px system-ui, sans-serif`;
+    ctx.fillText(
+      `BIB #${this.options.primaryLook.bib || '0000'} • ${activity.dateFormatted}`,
+      left + fs(42),
+      top + fs(49),
+    );
 
+    ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.ink;
-    ctx.font = `900 ${fs(48)}px system-ui, sans-serif`;
-    ctx.fillText(formatClock(activity.totalDurationSec), centerX, medalY + fs(150));
+    ctx.font = `900 ${fs(30)}px system-ui, sans-serif`;
+    ctx.fillText(formatClock(activity.totalDurationSec), right, top + fs(37));
     ctx.fillStyle = COLORS.green;
-    ctx.font = `800 ${fs(12)}px system-ui, sans-serif`;
-    ctx.fillText(`${activity.totalDistanceKm.toFixed(2)} KM • ${activity.avgPaceFormatted}/KM`, centerX, medalY + fs(170));
+    ctx.font = `800 ${fs(8.2)}px system-ui, sans-serif`;
+    ctx.fillText(
+      `${activity.totalDistanceKm.toFixed(2)} KM • ${activity.avgPaceFormatted}/KM`,
+      right,
+      top + fs(53),
+    );
 
-    const statY = medalY + fs(206);
-    const statWidth = (cardWidth - fs(48)) / 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = fs(1);
+    ctx.beginPath();
+    ctx.moveTo(left, top + fs(63));
+    ctx.lineTo(right, top + fs(63));
+    ctx.stroke();
+
+    const statY = top + fs(74);
+    const statGap = fs(8);
+    const statWidth = (cardWidth - fs(40) - statGap * 2) / 3;
     const stats = [
       { label: 'AVG HR', value: `${activity.avgHeartRate} bpm`, color: COLORS.rose },
       { label: 'CADENCE', value: `${activity.avgCadence} spm`, color: COLORS.purple },
       { label: 'ELEV GAIN', value: `+${activity.totalElevationGain} m`, color: COLORS.sky },
     ];
     stats.forEach((stat, index) => {
-      const x = cardX + fs(24) + index * statWidth;
-      glass(ctx, x, statY, statWidth - fs(8), fs(60), fs(14), 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.1)', fs(0.9));
+      const x = left + index * (statWidth + statGap);
+      glass(
+        ctx,
+        x,
+        statY,
+        statWidth,
+        fs(46),
+        fs(12),
+        'rgba(255,255,255,0.05)',
+        'rgba(255,255,255,0.1)',
+        fs(0.9),
+      );
+      ctx.textAlign = 'center';
       ctx.fillStyle = COLORS.muted;
-      ctx.font = `700 ${fs(7.4)}px system-ui, sans-serif`;
-      ctx.fillText(stat.label, x + (statWidth - fs(8)) / 2, statY + fs(21));
+      ctx.font = `700 ${fs(6.6)}px system-ui, sans-serif`;
+      ctx.fillText(stat.label, x + statWidth / 2, statY + fs(16));
       ctx.fillStyle = stat.color;
-      ctx.font = `900 ${fs(13)}px system-ui, sans-serif`;
-      ctx.fillText(stat.value, x + (statWidth - fs(8)) / 2, statY + fs(41));
+      ctx.font = `900 ${fs(11)}px system-ui, sans-serif`;
+      ctx.fillText(stat.value, x + statWidth / 2, statY + fs(34));
     });
 
-    const outcome = this.options.outcome;
     if (outcome) {
-      const rival = this.options.rival;
-      const duelY = statY + fs(80);
-      glass(ctx, cardX + fs(24), duelY, cardWidth - fs(48), fs(88), fs(16), 'rgba(2,6,23,0.7)', 'rgba(251,191,36,0.35)', fs(1.1));
+      const duelY = statY + fs(56);
+      glass(
+        ctx,
+        left,
+        duelY,
+        cardWidth - fs(40),
+        fs(50),
+        fs(12),
+        'rgba(2,6,23,0.7)',
+        'rgba(251,191,36,0.35)',
+        fs(1),
+      );
+      ctx.textAlign = 'center';
       ctx.fillStyle = COLORS.amber;
-      ctx.font = `900 ${fs(10)}px system-ui, sans-serif`;
-      ctx.fillText(outcome.winner === 'tie' ? '⚔️ DUEL 1V1 • HASIL SERI' : `⚔️ DUEL 1V1 • ${outcome.winnerName} MENANG`, centerX, duelY + fs(20));
+      ctx.font = `900 ${fs(8.4)}px system-ui, sans-serif`;
+      ctx.fillText(
+        outcome.winner === 'tie'
+          ? '⚔️ DUEL 1V1 • HASIL SERI'
+          : `⚔️ DUEL 1V1 • ${outcome.winnerName} MENANG`,
+        width / 2,
+        duelY + fs(17),
+      );
       ctx.fillStyle = COLORS.ink;
-      ctx.font = `900 ${fs(12)}px system-ui, sans-serif`;
-      ctx.fillText(outcome.marginLabel, centerX, duelY + fs(39));
-      if (rival) {
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = `700 ${fs(8)}px system-ui, sans-serif`;
-        ctx.fillText(
-          `${this.options.primaryLook.name.toUpperCase()} ${formatClock(activity.totalDurationSec)} • ${this.options.rivalLook.name.toUpperCase()} ${formatClock(rival.totalDurationSec)} • ${formatPace(outcome.p1PaceSecPerKm / 60)} vs ${formatPace(outcome.rivalPaceSecPerKm / 60)}`,
-          centerX,
-          duelY + fs(62),
-        );
-      }
+      ctx.font = `800 ${fs(10)}px system-ui, sans-serif`;
+      ctx.fillText(outcome.marginLabel, width / 2, duelY + fs(34));
     }
-
-    this.drawFinishRoute(ctx, cardX, cardY, cardWidth, cardHeight, fs);
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(226,232,240,0.6)';
-    ctx.font = `700 ${fs(7.5)}px system-ui, sans-serif`;
-    ctx.fillText('JEJAKLARI LOCAL STUDIO • RENDER 9:16', centerX, cardY + cardHeight - fs(18));
+    ctx.fillStyle = 'rgba(226,232,240,0.55)';
+    ctx.font = `700 ${fs(6.4)}px system-ui, sans-serif`;
+    ctx.fillText('JEJAKLARI STUDIO • 9:16', width / 2, cardY + cardHeight - fs(10));
     ctx.textAlign = 'left';
     ctx.restore();
-  }
-
-  private drawFinishRoute(
-    ctx: CanvasRenderingContext2D,
-    cardX: number,
-    cardY: number,
-    cardWidth: number,
-    cardHeight: number,
-    fs: (value: number) => number,
-  ): void {
-    const x = cardX + fs(24);
-    const width = cardWidth - fs(48);
-    const height = fs(138);
-    const y = cardY + cardHeight - fs(174);
-    glass(ctx, x, y, width, height, fs(14), 'rgba(2,6,23,0.62)', 'rgba(255,255,255,0.12)', fs(1));
-
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = `800 ${fs(7.4)}px system-ui, sans-serif`;
-    ctx.fillText('RUTE LARI', x + fs(12), y + fs(17));
-    ctx.textAlign = 'right';
-    ctx.fillStyle = COLORS.green;
-    ctx.fillText(`${this.options.activity.totalDistanceKm.toFixed(2)} KM`, x + width - fs(12), y + fs(17));
-
-    const bounds = this.minimapBounds;
-    const innerX = x + fs(14);
-    const innerY = y + fs(26);
-    const innerWidth = width - fs(28);
-    const innerHeight = height - fs(36);
-    const spanX = Math.max(1, bounds.maxX - bounds.minX);
-    const spanZ = Math.max(1, bounds.maxZ - bounds.minZ);
-    const fit = Math.min(innerWidth / spanX, innerHeight / spanZ);
-    const offsetX = innerX + (innerWidth - spanX * fit) / 2;
-    const offsetY = innerY + (innerHeight - spanZ * fit) / 2;
-    const project = (px: number, pz: number) => ({
-      x: offsetX + (px - bounds.minX) * fit,
-      y: offsetY + (pz - bounds.minZ) * fit,
-    });
-
-    const start = this.options.route[0];
-    const finish = this.options.route[this.options.route.length - 1];
-    ctx.strokeStyle = 'rgba(94,234,212,0.18)';
-    ctx.lineWidth = fs(6);
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    this.options.route.forEach((entry, index) => {
-      const mapped = project(entry.x, entry.z);
-      if (index === 0) ctx.moveTo(mapped.x, mapped.y);
-      else ctx.lineTo(mapped.x, mapped.y);
-    });
-    ctx.stroke();
-
-    ctx.strokeStyle = COLORS.teal;
-    ctx.lineWidth = fs(2.2);
-    ctx.stroke();
-
-    if (start && finish) {
-      const startPoint = project(start.x, start.z);
-      const finishPoint = project(finish.x, finish.z);
-      ctx.beginPath();
-      ctx.arc(startPoint.x, startPoint.y, fs(3.5), 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.green;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(finishPoint.x, finishPoint.y, fs(4), 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.amber;
-      ctx.fill();
-    }
-    ctx.textAlign = 'left';
   }
 
   private drawAttribution(

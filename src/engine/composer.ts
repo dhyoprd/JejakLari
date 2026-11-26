@@ -84,7 +84,6 @@ export class FrameComposer {
 
     this.hud = new HudRenderer({
       activity: options.activity,
-      rival: options.rival,
       primaryLook: options.primaryLook,
       rivalLook: options.rivalLook,
       diorama: options.diorama,

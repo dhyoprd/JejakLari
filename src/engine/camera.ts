@@ -54,6 +54,24 @@ export class CameraDirector {
     return { position, target: new THREE.Vector3(0, 0, 0) };
   }
 
+  private introPose(progress: number): {
+    position: THREE.Vector3;
+    target: THREE.Vector3;
+  } {
+    const span = Math.max(350, this.diorama.spanMetersX, this.diorama.spanMetersZ);
+    const distance = Math.max(500, Math.min(2400, span * 0.9));
+    const angle = (Math.max(0, Math.min(1, progress)) - 0.5) * 1.2;
+    const radius = distance * 0.62;
+    return {
+      position: new THREE.Vector3(
+        Math.sin(angle) * radius,
+        distance * 0.34,
+        Math.cos(angle) * radius,
+      ),
+      target: new THREE.Vector3(0, 0, 0),
+    };
+  }
+
   private poseFor(
     preset: CameraPreset,
     x: number,
@@ -141,7 +159,10 @@ export class CameraDirector {
       desiredPosition = new THREE.Vector3(x, 4.25, z - 12.2);
       desiredTarget = new THREE.Vector3(x, 4.25, z);
     } else if (frame.phase === 'intro' && preset !== 'drone') {
-      const orbit = this.overview(Math.sin(frame.introProgress * Math.PI));
+      // A close, low three-quarter orbit. The old intro reused the drone
+      // overview altitude (4+ km on a 1.9 km route), which read as a map
+      // screenshot rather than a run film.
+      const orbit = this.introPose(frame.introProgress);
       const blend = smoothstep((frame.introProgress - 0.42) / 0.58);
       desiredPosition = orbit.position.clone().lerp(follow.position, blend);
       desiredTarget = orbit.target.clone().lerp(follow.target, blend);
