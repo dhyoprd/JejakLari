@@ -17,7 +17,7 @@ $ npx tsc --noEmit
 $ npm run build
 dist/index.html                     0.76 kB │ gzip:   0.46 kB
 dist/assets/index-*.css            14.16 kB │ gzip:   3.81 kB
-dist/assets/index-*.js          1,274.17 kB │ gzip: 334.85 kB
+dist/assets/index-*.js          1,274.11 kB │ gzip: 334.85 kB
 ✓ built in ~256 ms
 ```
 
@@ -104,10 +104,12 @@ With a 5 km GBK route and the default `maps.mail.ru` endpoint:
   40 ms samples had 0 dark frames; OCR of a mid-run stage capture found title, pace, distance, heart
   rate, cadence, and time. The WebM fallback captures the same composed canvas: a 5 s frame OCRs
   with the full HUD.
-- Map depth stability: camera near/far are 1 and a diorama-derived far (12–30 km); the ground uses
-  a positive polygon offset, route/markers/buildings a negative offset, route core writes depth,
-  markers sit above the ribbon, and the map texture uses 16× anisotropy + mipmaps. Mid-run captures
-  still show the route/HUD (2,349 teal pixels; 0 dark frames in 25 samples).
+- Map depth stability: camera near/far are 1 and a diorama-derived far (12–30 km); the decorative
+  base slab sits 25 m below the map (its old 10 cm gap was occluded by the ground after a bad
+  polygon offset), route/markers/buildings use negative offsets, route core writes depth, markers
+  sit above the ribbon, and the map texture uses 16× anisotropy + mipmaps. The central map region
+  then contains 329 quantized colors (terrain) instead of the slab's single flat color; route/HUD
+  remain visible and 25 samples contain 0 dark frames.
 - Production server on port 5189: `dist/` served, `/api/strava/status` 200 JSON, client route
   returned `text/html`, no console errors.
 

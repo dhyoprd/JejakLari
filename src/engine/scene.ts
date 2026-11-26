@@ -225,22 +225,19 @@ export class StudioScene {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(options.map.widthMeters, options.map.heightMeters),
-      new THREE.MeshBasicMaterial({
-        map: this.mapTexture,
-        polygonOffset: true,
-        polygonOffsetFactor: 1,
-        polygonOffsetUnits: 1,
-      }),
+      new THREE.MeshBasicMaterial({ map: this.mapTexture }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(options.map.centerX, 0, options.map.centerZ);
     this.scene.add(ground);
 
     const slab = new THREE.Mesh(
-      new THREE.BoxGeometry(options.map.widthMeters * 1.02, 16, options.map.heightMeters * 1.02),
+      new THREE.BoxGeometry(options.map.widthMeters * 1.02, 50, options.map.heightMeters * 1.02),
       new THREE.MeshStandardMaterial({ color: palette.ground, roughness: 1, metalness: 0 }),
     );
-    slab.position.set(options.map.centerX, -8.1, options.map.centerZ);
+    // Keep the decorative base far below the map so it can never win the
+    // depth test at aerial camera distances.
+    slab.position.set(options.map.centerX, -50.1, options.map.centerZ);
     this.scene.add(slab);
 
     this.route = buildRoute(options.activity.timeline, options.diorama);
